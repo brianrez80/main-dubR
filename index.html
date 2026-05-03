@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cheryl's Recipe Box</title>
+  <style>
+    :root{
+      --bg:#f7f3ee;
+      --card:#ffffff;
+      --text:#26211c;
+      --muted:#6f675f;
+      --line:#e8dfd5;
+      --accent:#2f241c;
+      --soft:#efe6dc;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial, Helvetica, sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 22px}
+    header{position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+    .nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
+    .brand small{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.18em;font-size:11px;margin-bottom:4px}
+    .brand h1{margin:0;font-size:30px}
+    section{padding:28px 0}
+    .hero{padding:52px 0 28px}
+    .pill{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;color:#5c534c;margin-bottom:12px}
+    h2{font-size:52px;line-height:1.02;margin:0 0 16px}
+    .lead{font-size:20px;color:var(--muted);max-width:700px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:24px;box-shadow:0 8px 28px rgba(42,31,22,.05)}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .recipe-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
+    .recipe-item h4{margin:0 0 8px}
+    .meta{font-size:13px;color:var(--muted);margin-bottom:8px}
+    .share{background:var(--accent);color:#fff;border-radius:34px;padding:28px}
+    .share p{color:#d7cbc1}
+    .form{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+    .form .full{grid-column:1/-1}
+    input,select,textarea{width:100%;padding:14px 15px;border-radius:16px;border:1px solid #5a4d43;background:#3b3028;color:#fff;font-size:16px}
+    textarea{min-height:120px;resize:vertical}
+    .save{background:#fff;color:var(--text);border:none;border-radius:16px;padding:14px 18px;font-weight:700;width:max-content;cursor:pointer}
+    footer{text-align:center;color:var(--muted);padding:24px 0 40px}
+    @media (max-width:860px){h2{font-size:40px}.grid,.form,.recipe-list{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="brand">
+        <small>Home cooking</small>
+        <h1>Cheryl’s Recipe Box</h1>
+      </div>
+      <nav>Cozy recipes, zero nonsense.</nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <span class="pill">Simple family recipes</span>
+      <h2>A warm little corner of the internet for Cheryl’s favorite recipes.</h2>
+      <p class="lead">Add recipes in seconds and file them by meat/salad category and ethnicity.</p>
+    </section>
+
+    <section id="recipes" class="grid">
+      <div class="card">
+        <h3>By Main Category</h3>
+        <div id="mainCategoryLists"></div>
+      </div>
+      <div class="card">
+        <h3>By Ethnicity</h3>
+        <div id="ethnicityLists"></div>
+      </div>
+    </section>
+
+    <section id="share">
+      <div class="share">
+        <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#b9aa9d">Add to the box</div>
+        <h3 style="font-size:34px;margin:8px 0 0">Ready for Cheryl’s next recipe</h3>
+        <p>This version lets Cheryl add recipes and choose where they belong.</p>
+        <form class="form" id="recipeForm">
+          <input id="name" placeholder="Recipe name" required />
+          <input id="time" placeholder="Cook time (optional)" />
+          <select id="mainCategory" required>
+            <option value="">Choose meat/salad category</option>
+            <option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option>
+          </select>
+          <select id="ethnicity" required>
+            <option value="">Choose ethnicity category</option>
+            <option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option>
+          </select>
+          <textarea id="notes" class="full" placeholder="Ingredients or notes" required></textarea>
+          <button class="save" type="submit">Save Recipe</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer>Made for Cheryl’s recipes — the tasty internet corner every kitchen deserves.</footer>
+
+  <script>
+    const recipes = [
+      { name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
+      { name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
+    ];
+
+    const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad'];
+
+    function render() {
+      const mainWrap = document.getElementById('mainCategoryLists');
+      const ethWrap = document.getElementById('ethnicityLists');
+
+      mainWrap.innerHTML = '';
+      mainCategories.forEach(category => {
+        const items = recipes.filter(r => r.mainCategory === category);
+        const block = document.createElement('div');
+        block.className = 'recipe-list';
+        block.innerHTML = `<div class="full"><h4>${category}</h4></div>` +
+          (items.length ? items.map(cardHtml).join('') : '<p class="meta">No recipes yet.</p>');
+        mainWrap.appendChild(block);
+      });
+
+      const ethnicityGroups = [...new Set(recipes.map(r => r.ethnicity))].sort();
+      ethWrap.innerHTML = '';
+      ethnicityGroups.forEach(eth => {
+        const items = recipes.filter(r => r.ethnicity === eth);
+        const block = document.createElement('div');
+        block.className = 'recipe-list';
+        block.innerHTML = `<div class="full"><h4>${eth}</h4></div>` + items.map(cardHtml).join('');
+        ethWrap.appendChild(block);
+      });
+    }
+
+    function cardHtml(r) {
+      return `<article class="card recipe-item"><h4>${r.name}</h4><div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ' • ' + r.time : ''}</div><p>${r.notes}</p></article>`;
+    }
+
+    document.getElementById('recipeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      recipes.push({
+        name: document.getElementById('name').value.trim(),
+        time: document.getElementById('time').value.trim(),
+        mainCategory: document.getElementById('mainCategory').value,
+        ethnicity: document.getElementById('ethnicity').value,
+        notes: document.getElementById('notes').value.trim()
+      });
+      e.target.reset();
+      render();
+    });
+
+    render();
+  </script>
+</body>
+</html>
