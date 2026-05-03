@@ -87,6 +87,7 @@
   const ethnicities = ['American', 'Mexican', 'Italian', 'Asian', 'Mediterranean', 'Other'];
   let recipes = loadRecipes();
   let editId = null;
+  let currentView = { section: 'home', type: null, value: null };
 
   function loadRecipes() {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -100,8 +101,8 @@
   }
 
   function saveRecipes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); }
-  function showSection(id) { document.querySelectorAll('main section').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); }
-  function showHome() { showSection('home'); clearResults(); clearForm(); }
+  function showSection(id) { document.querySelectorAll('main section').forEach(s => s.classList.add('hidden')); document.getElementById(id).classList.remove('hidden'); currentView.section = id; }
+  function showHome() { showSection('home'); clearResults(); clearForm(); currentView = { section: 'home', type: null, value: null }; }
   function clearResults(){ ['meatResults','ethResults','allResults'].forEach(id => document.getElementById(id).innerHTML=''); }
 
   function card(r) {
@@ -112,9 +113,10 @@
     const list = recipes.filter(r => r[type] === value);
     const target = document.getElementById(targetId);
     target.innerHTML = list.length ? list.map(card).join('') : '<p class="meta">No recipes yet.</p>';
+    currentView = { section: targetId === 'meatResults' ? 'meatSection' : 'ethSection', type, value };
   }
 
-  function showAllRecipes() { showSection('allSection'); document.getElementById('allResults').innerHTML = recipes.length ? recipes.map(card).join('') : '<p class="meta">No recipes yet.</p>'; }
+  function showAllRecipes() { showSection('allSection'); document.getElementById('allResults').innerHTML = recipes.length ? recipes.map(card).join('') : '<p class="meta">No recipes yet.</p>'; currentView = { section: 'allSection', type: null, value: null }; }
 
   function startEdit(id) {
     const r = recipes.find(x => x.id === id); if (!r) return;
@@ -131,7 +133,17 @@
   }
 
   function refreshVisibleResults(){
-    if (!document.getElementById('allSection').classList.contains('hidden')) showAllRecipes();
+    if (currentView.section === 'allSection') {
+      showAllRecipes();
+      return;
+    }
+    if (currentView.section === 'meatSection' && currentView.type && currentView.value) {
+      renderByCategory('mainCategory', currentView.value, 'meatResults');
+      return;
+    }
+    if (currentView.section === 'ethSection' && currentView.type && currentView.value) {
+      renderByCategory('ethnicity', currentView.value, 'ethResults');
+    }
   }
 
   document.getElementById('recipeForm').addEventListener('submit', (e) => {
