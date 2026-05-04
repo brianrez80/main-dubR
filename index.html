@@ -5,41 +5,146 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cheryl's Recipe Box</title>
   <style>
-    :root{
-      --bg:#f7f3ee;
-      --card:#ffffff;
-      --text:#26211c;
-      --muted:#6f675f;
-      --line:#e8dfd5;
-      --accent:#2f241c;
-      --soft:#efe6dc;
+    :root {
+      --bg: #f7f3ee;
+      --card: #ffffff;
+      --text: #26211c;
+      --muted: #6f675f;
+      --line: #e8dfd5;
+      --accent: #2f241c;
+      --soft: #efe6dc;
+      --danger: #8a2d2d;
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Arial, Helvetica, sans-serif;background:var(--bg);color:var(--text);line-height:1.5}
-    .wrap{max-width:1100px;margin:0 auto;padding:0 22px}
-    header{position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
-    .nav{display:flex;justify-content:space-between;align-items:center;padding:18px 0}
-    .brand small{display:block;color:var(--muted);text-transform:uppercase;letter-spacing:.18em;font-size:11px;margin-bottom:4px}
-    .brand h1{margin:0;font-size:30px}
-    section{padding:28px 0}
-    .hero{padding:52px 0 28px}
-    .pill{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:14px;color:#5c534c;margin-bottom:12px}
-    h2{font-size:52px;line-height:1.02;margin:0 0 16px}
-    .lead{font-size:20px;color:var(--muted);max-width:700px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:28px;padding:24px;box-shadow:0 8px 28px rgba(42,31,22,.05)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-    .recipe-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:16px}
-    .recipe-item h4{margin:0 0 8px}
-    .meta{font-size:13px;color:var(--muted);margin-bottom:8px}
-    .share{background:var(--accent);color:#fff;border-radius:34px;padding:28px}
-    .share p{color:#d7cbc1}
-    .form{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
-    .form .full{grid-column:1/-1}
-    input,select,textarea{width:100%;padding:14px 15px;border-radius:16px;border:1px solid #5a4d43;background:#3b3028;color:#fff;font-size:16px}
-    textarea{min-height:120px;resize:vertical}
-    .save{background:#fff;color:var(--text);border:none;border-radius:16px;padding:14px 18px;font-weight:700;width:max-content;cursor:pointer}
-    footer{text-align:center;color:var(--muted);padding:24px 0 40px}
-    @media (max-width:860px){h2{font-size:40px}.grid,.form,.recipe-list{grid-template-columns:1fr}}
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 22px; }
+
+    header {
+      position: sticky;
+      top: 0;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+      z-index: 2;
+    }
+
+    .nav { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; }
+    .brand small { display: block; color: var(--muted); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; margin-bottom: 4px; }
+    .brand h1 { margin: 0; font-size: 30px; }
+
+    main { padding: 28px 0 46px; }
+
+    h2 { margin: 0 0 20px; font-size: 40px; }
+
+    .home-buttons {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-bottom: 26px;
+    }
+
+    .home-button {
+      border: 2px solid var(--line);
+      background: var(--card);
+      border-radius: 22px;
+      min-height: 120px;
+      font-size: 24px;
+      font-weight: 700;
+      padding: 20px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform .12s ease, box-shadow .12s ease;
+    }
+
+    .home-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(42, 31, 22, .08); }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .hidden { display: none; }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      border-radius: 999px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .recipe-list { display: grid; gap: 14px; }
+
+    .recipe-item {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .recipe-item h4 { margin: 0 0 6px; }
+    .meta { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
+
+    .actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    .btn {
+      border: none;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-edit { background: var(--soft); color: var(--text); }
+    .btn-delete { background: #f7dede; color: var(--danger); }
+
+    .form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .form .full { grid-column: 1 / -1; }
+
+    input, select, textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      padding: 12px;
+      font-size: 15px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    textarea { min-height: 100px; resize: vertical; }
+
+    .save { background: var(--accent); color: #fff; }
+
+    @media (max-width: 860px) {
+      .home-buttons, .form { grid-template-columns: 1fr; }
+      h2 { font-size: 30px; }
+    }
   </style>
 </head>
 <body>
@@ -54,99 +159,201 @@
   </header>
 
   <main class="wrap">
-    <section class="hero">
-      <span class="pill">Simple family recipes</span>
-      <h2>A warm little corner of the internet for Cheryl’s favorite recipes.</h2>
-      <p class="lead">Add recipes in seconds and file them by meat/salad category and ethnicity.</p>
-    </section>
-
-    <section id="recipes" class="grid">
-      <div class="card">
-        <h3>By Main Category</h3>
-        <div id="mainCategoryLists"></div>
-      </div>
-      <div class="card">
-        <h3>By Ethnicity</h3>
-        <div id="ethnicityLists"></div>
+    <section id="homeView">
+      <h2>Choose what Cheryl wants to do</h2>
+      <div class="home-buttons">
+        <button class="home-button" data-action="new">Add New Recipe</button>
+        <button class="home-button" data-action="main">Browse by Meat / Main Category</button>
+        <button class="home-button" data-action="ethnicity">Browse by Ethnicity / Cuisine</button>
+        <button class="home-button" data-action="all">All Recipes</button>
       </div>
     </section>
 
-    <section id="share">
-      <div class="share">
-        <div style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#b9aa9d">Add to the box</div>
-        <h3 style="font-size:34px;margin:8px 0 0">Ready for Cheryl’s next recipe</h3>
-        <p>This version lets Cheryl add recipes and choose where they belong.</p>
-        <form class="form" id="recipeForm">
-          <input id="name" placeholder="Recipe name" required />
-          <input id="time" placeholder="Cook time (optional)" />
-          <select id="mainCategory" required>
-            <option value="">Choose meat/salad category</option>
-            <option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option>
-          </select>
-          <select id="ethnicity" required>
-            <option value="">Choose ethnicity category</option>
-            <option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option>
-          </select>
-          <textarea id="notes" class="full" placeholder="Ingredients or notes" required></textarea>
-          <button class="save" type="submit">Save Recipe</button>
-        </form>
-      </div>
+    <section id="mainBrowser" class="panel hidden">
+      <h3>Browse by Meat / Main Category</h3>
+      <div id="mainChips" class="chip-row"></div>
+    </section>
+
+    <section id="ethnicityBrowser" class="panel hidden">
+      <h3>Browse by Ethnicity / Cuisine</h3>
+      <div id="ethnicityChips" class="chip-row"></div>
+    </section>
+
+    <section id="recipeResults" class="panel hidden">
+      <h3 id="resultsTitle">Recipes</h3>
+      <div id="recipeList" class="recipe-list"></div>
+    </section>
+
+    <section id="formPanel" class="panel hidden">
+      <h3 id="formTitle">Add New Recipe</h3>
+      <form class="form" id="recipeForm">
+        <input id="name" placeholder="Recipe name" required />
+        <input id="time" placeholder="Cook time (optional)" />
+        <select id="mainCategory" required>
+          <option value="">Choose meat/main category</option>
+          <option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option>
+        </select>
+        <select id="ethnicity" required>
+          <option value="">Choose ethnicity/cuisine</option>
+          <option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option>
+        </select>
+        <textarea id="notes" class="full" placeholder="Ingredients or notes" required></textarea>
+        <button class="btn save full" type="submit">Save Recipe</button>
+      </form>
     </section>
   </main>
 
-  <footer>Made for Cheryl’s recipes — the tasty internet corner every kitchen deserves.</footer>
-
   <script>
-    const recipes = [
-      { name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
-      { name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
+    const STORAGE_KEY = 'cheryl-recipe-box';
+    const defaultRecipes = [
+      { id: crypto.randomUUID(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
+      { id: crypto.randomUUID(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
     ];
 
     const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad'];
+    const form = document.getElementById('recipeForm');
+    const formTitle = document.getElementById('formTitle');
+    const recipeList = document.getElementById('recipeList');
+    const resultsTitle = document.getElementById('resultsTitle');
 
-    function render() {
-      const mainWrap = document.getElementById('mainCategoryLists');
-      const ethWrap = document.getElementById('ethnicityLists');
+    let recipes = loadRecipes();
+    let editingId = null;
 
-      mainWrap.innerHTML = '';
-      mainCategories.forEach(category => {
-        const items = recipes.filter(r => r.mainCategory === category);
-        const block = document.createElement('div');
-        block.className = 'recipe-list';
-        block.innerHTML = `<div class="full"><h4>${category}</h4></div>` +
-          (items.length ? items.map(cardHtml).join('') : '<p class="meta">No recipes yet.</p>');
-        mainWrap.appendChild(block);
-      });
-
-      const ethnicityGroups = [...new Set(recipes.map(r => r.ethnicity))].sort();
-      ethWrap.innerHTML = '';
-      ethnicityGroups.forEach(eth => {
-        const items = recipes.filter(r => r.ethnicity === eth);
-        const block = document.createElement('div');
-        block.className = 'recipe-list';
-        block.innerHTML = `<div class="full"><h4>${eth}</h4></div>` + items.map(cardHtml).join('');
-        ethWrap.appendChild(block);
-      });
+    function loadRecipes() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return [...defaultRecipes];
+      try {
+        const parsed = JSON.parse(saved);
+        return Array.isArray(parsed) ? parsed : [...defaultRecipes];
+      } catch {
+        return [...defaultRecipes];
+      }
     }
 
-    function cardHtml(r) {
-      return `<article class="card recipe-item"><h4>${r.name}</h4><div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ' • ' + r.time : ''}</div><p>${r.notes}</p></article>`;
+    function saveRecipes() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
     }
 
-    document.getElementById('recipeForm').addEventListener('submit', (e) => {
+    function hidePanels() {
+      document.querySelectorAll('#mainBrowser, #ethnicityBrowser, #recipeResults, #formPanel').forEach(el => el.classList.add('hidden'));
+    }
+
+    function showPanel(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function renderCategoryChips() {
+      const mainWrap = document.getElementById('mainChips');
+      const ethWrap = document.getElementById('ethnicityChips');
+
+      mainWrap.innerHTML = mainCategories
+        .map(category => `<button class="chip" data-filter-type="main" data-filter-value="${category}">${category}</button>`)
+        .join('');
+
+      const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort();
+      ethWrap.innerHTML = ethnicities
+        .map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`)
+        .join('');
+    }
+
+    function renderRecipes(list, title) {
+      resultsTitle.textContent = title;
+      showPanel('recipeResults');
+
+      if (!list.length) {
+        recipeList.innerHTML = '<p>No recipes yet.</p>';
+        return;
+      }
+
+      recipeList.innerHTML = list.map(r => `
+        <article class="recipe-item">
+          <h4>${r.name}</h4>
+          <div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ` • ${r.time}` : ''}</div>
+          <p>${r.notes}</p>
+          <div class="actions">
+            <button class="btn btn-edit" data-edit-id="${r.id}">Edit</button>
+            <button class="btn btn-delete" data-delete-id="${r.id}">Delete</button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    document.getElementById('homeView').addEventListener('click', (e) => {
+      const action = e.target.dataset.action;
+      if (!action) return;
+
+      hidePanels();
+      if (action === 'new') {
+        editingId = null;
+        form.reset();
+        formTitle.textContent = 'Add New Recipe';
+        showPanel('formPanel');
+      }
+      if (action === 'main') showPanel('mainBrowser');
+      if (action === 'ethnicity') showPanel('ethnicityBrowser');
+      if (action === 'all') renderRecipes(recipes, 'All Recipes');
+    });
+
+    document.body.addEventListener('click', (e) => {
+      const filterType = e.target.dataset.filterType;
+      const filterValue = e.target.dataset.filterValue;
+      const editId = e.target.dataset.editId;
+      const deleteId = e.target.dataset.deleteId;
+
+      if (filterType && filterValue) {
+        const filtered = recipes.filter(r => r[filterType] === filterValue);
+        renderRecipes(filtered, `${filterValue} Recipes`);
+      }
+
+      if (editId) {
+        const recipe = recipes.find(r => r.id === editId);
+        if (!recipe) return;
+        hidePanels();
+        showPanel('formPanel');
+        editingId = editId;
+        formTitle.textContent = 'Edit Recipe';
+        document.getElementById('name').value = recipe.name;
+        document.getElementById('time').value = recipe.time;
+        document.getElementById('mainCategory').value = recipe.mainCategory;
+        document.getElementById('ethnicity').value = recipe.ethnicity;
+        document.getElementById('notes').value = recipe.notes;
+      }
+
+      if (deleteId) {
+        recipes = recipes.filter(r => r.id !== deleteId);
+        saveRecipes();
+        renderCategoryChips();
+        renderRecipes(recipes, 'All Recipes');
+      }
+    });
+
+    form.addEventListener('submit', (e) => {
       e.preventDefault();
-      recipes.push({
+      const recipeData = {
+        id: editingId || crypto.randomUUID(),
         name: document.getElementById('name').value.trim(),
         time: document.getElementById('time').value.trim(),
         mainCategory: document.getElementById('mainCategory').value,
         ethnicity: document.getElementById('ethnicity').value,
         notes: document.getElementById('notes').value.trim()
-      });
-      e.target.reset();
-      render();
+      };
+
+      if (editingId) {
+        recipes = recipes.map(r => (r.id === editingId ? recipeData : r));
+      } else {
+        recipes.push(recipeData);
+      }
+
+      editingId = null;
+      form.reset();
+      formTitle.textContent = 'Add New Recipe';
+      saveRecipes();
+      renderCategoryChips();
+      hidePanels();
+      renderRecipes(recipes, 'All Recipes');
     });
 
-    render();
+    renderCategoryChips();
   </script>
 </body>
 </html>
