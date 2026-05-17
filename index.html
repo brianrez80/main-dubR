@@ -14,226 +14,65 @@
       --accent: #6f4a8e;
       --soft: #eadcf8;
       --danger: #8a2d2d;
-      --butterfly: #8b5fbf;
     }
-
     * { box-sizing: border-box; }
-
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background:
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.75), transparent 32%),
-        var(--bg);
+      background: radial-gradient(circle at top left, rgba(255,255,255,.75), transparent 32%), var(--bg);
       color: var(--text);
       line-height: 1.5;
     }
-
-    body.locked {
-      overflow: hidden;
-    }
-
+    body.locked { overflow: hidden; }
     .wrap { max-width: 1100px; margin: 0 auto; padding: 0 22px; }
-
-    header {
-      position: sticky;
-      top: 0;
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--line);
-      z-index: 2;
-    }
-
+    header { position: sticky; top: 0; background: rgba(255,255,255,.88); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); z-index: 2; }
     .nav { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; }
     .brand small { display: block; color: var(--muted); text-transform: uppercase; letter-spacing: .18em; font-size: 11px; margin-bottom: 4px; }
     .brand h1 { margin: 0; font-size: 30px; }
-
-    main { padding: 28px 0 46px; }
-
+    main { padding: 28px 0 46px; position: relative; z-index: 2; }
     h2 { margin: 0 0 20px; font-size: 40px; }
-
-    .butterfly {
-      position: fixed;
-      font-size: 46px;
-      color: var(--butterfly);
-      opacity: .7;
-      pointer-events: none;
-      z-index: 1;
-      filter: drop-shadow(0 8px 14px rgba(73, 36, 107, .16));
-    }
-
-    .butterfly.one {
-      top: 118px;
-      right: 42px;
-      transform: rotate(12deg);
-    }
-
-    .butterfly.two {
-      bottom: 50px;
-      left: 34px;
-      transform: rotate(-18deg) scale(.88);
-    }
-
-    .home-buttons {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-      margin-bottom: 26px;
-    }
-
-    .home-button {
-      border: 2px solid var(--line);
-      background: rgba(255, 255, 255, .9);
-      border-radius: 22px;
-      min-height: 120px;
-      font-size: 24px;
-      font-weight: 700;
-      padding: 20px;
-      text-align: left;
-      cursor: pointer;
-      transition: transform .12s ease, box-shadow .12s ease;
-    }
-
-    .home-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(82, 52, 110, .12); }
-
-    .panel {
-      background: rgba(255, 255, 255, .92);
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 28px rgba(82, 52, 110, .08);
-    }
-
+    .butterfly { position: fixed; width: 76px; height: auto; opacity: .88; pointer-events: none; z-index: 1; filter: drop-shadow(0 8px 14px rgba(73,36,107,.18)); }
+    .butterfly.one { top: 108px; right: 42px; transform: rotate(8deg); }
+    .butterfly.two { bottom: 46px; left: 34px; transform: rotate(-15deg) scale(.9); }
+    .butterfly.three { top: 210px; left: 72px; transform: rotate(-8deg) scale(.75); }
+    .butterfly.four { bottom: 150px; right: 90px; transform: rotate(15deg) scale(1.05); }
+    .butterfly.five { top: 380px; right: 22%; transform: rotate(-22deg) scale(.68); opacity: .76; }
+    .butterfly.six { bottom: 245px; left: 22%; transform: rotate(18deg) scale(.62); opacity: .7; }
+    .home-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-bottom: 26px; }
+    .home-button { border: 2px solid var(--line); background: rgba(255,255,255,.9); border-radius: 22px; min-height: 120px; font-size: 24px; font-weight: 700; padding: 20px; text-align: left; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease; }
+    .home-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(82,52,110,.12); }
+    .panel { background: rgba(255,255,255,.92); border: 1px solid var(--line); border-radius: 20px; padding: 20px; margin-bottom: 20px; box-shadow: 0 10px 28px rgba(82,52,110,.08); }
     .hidden { display: none !important; }
-
-    .chip-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .chip {
-      border: 1px solid var(--line);
-      background: var(--soft);
-      border-radius: 999px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
+    .chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .chip { border: 1px solid var(--line); background: var(--soft); border-radius: 999px; padding: 10px 14px; cursor: pointer; font-weight: 600; }
     .recipe-list { display: grid; gap: 14px; }
-
-    .recipe-item {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 14px;
-      background: #fff;
-    }
-
+    .recipe-item { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: #fff; }
     .recipe-item h4 { margin: 0 0 6px; }
     .meta { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
-
     .actions { display: flex; gap: 8px; margin-top: 10px; }
-
-    .btn {
-      border: none;
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-
+    .btn { border: none; border-radius: 10px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
     .btn-edit { background: var(--soft); color: var(--text); }
     .btn-delete { background: #f7dede; color: var(--danger); }
-
-    .form {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 10px;
-    }
-
-    .form .full { grid-column: 1 / -1; }
-
-    input, select, textarea {
-      width: 100%;
-      border-radius: 12px;
-      border: 1px solid var(--line);
-      padding: 12px;
-      font-size: 15px;
-      background: #fff;
-      color: var(--text);
-    }
-
-    textarea { min-height: 100px; resize: vertical; }
-
     .save { background: var(--accent); color: #fff; }
-
-    .pin-screen {
-      position: fixed;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 24px;
-      background:
-        radial-gradient(circle at top right, rgba(255, 255, 255, .75), transparent 30%),
-        linear-gradient(135deg, #f4e9ff, #ead6ff);
-      z-index: 99;
-    }
-
-    .pin-card {
-      width: min(430px, 100%);
-      background: rgba(255, 255, 255, .94);
-      border: 1px solid var(--line);
-      border-radius: 28px;
-      padding: 30px;
-      box-shadow: 0 18px 42px rgba(82, 52, 110, .18);
-      text-align: center;
-    }
-
-    .pin-card .pin-butterflies {
-      font-size: 38px;
-      letter-spacing: 8px;
-      margin-bottom: 8px;
-    }
-
-    .pin-card h2 {
-      font-size: 34px;
-      margin-bottom: 8px;
-    }
-
-    .pin-card p {
-      margin: 0 0 18px;
-      color: var(--muted);
-    }
-
-    .pin-card input {
-      text-align: center;
-      font-size: 24px;
-      letter-spacing: .28em;
-      margin-bottom: 12px;
-    }
-
-    .pin-error {
-      min-height: 22px;
-      color: var(--danger);
-      font-weight: 700;
-      margin-top: 10px;
-    }
-
-    @media (max-width: 860px) {
-      .home-buttons, .form { grid-template-columns: 1fr; }
-      h2 { font-size: 30px; }
-      .butterfly { font-size: 34px; }
-    }
+    .form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+    .form .full { grid-column: 1 / -1; }
+    input, select, textarea { width: 100%; border-radius: 12px; border: 1px solid var(--line); padding: 12px; font-size: 15px; background: #fff; color: var(--text); }
+    textarea { min-height: 100px; resize: vertical; }
+    .pin-screen { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top right, rgba(255,255,255,.75), transparent 30%), linear-gradient(135deg, #f4e9ff, #ead6ff); z-index: 99; }
+    .pin-card { width: min(430px, 100%); background: rgba(255,255,255,.94); border: 1px solid var(--line); border-radius: 28px; padding: 30px; box-shadow: 0 18px 42px rgba(82,52,110,.18); text-align: center; }
+    .pin-card .pin-butterflies { display: flex; justify-content: center; gap: 14px; margin-bottom: 10px; }
+    .pin-card .pin-butterflies img { width: 46px; height: auto; filter: drop-shadow(0 5px 10px rgba(73,36,107,.18)); }
+    .pin-card h2 { font-size: 34px; margin-bottom: 8px; }
+    .pin-card p { margin: 0 0 18px; color: var(--muted); }
+    .pin-card input { text-align: center; font-size: 24px; letter-spacing: .28em; margin-bottom: 12px; }
+    .pin-error { min-height: 22px; color: var(--danger); font-weight: 700; margin-top: 10px; }
+    @media (max-width: 860px) { .home-buttons, .form { grid-template-columns: 1fr; } h2 { font-size: 30px; } .butterfly { width: 54px; } .butterfly.three, .butterfly.five, .butterfly.six { display: none; } }
   </style>
 </head>
 <body class="locked">
   <div id="pinScreen" class="pin-screen">
     <div class="pin-card">
-      <div class="pin-butterflies">🦋 🦋</div>
+      <div class="pin-butterflies"><img src="butterfly.svg" alt=""><img src="butterfly.svg" alt=""></div>
       <h2>Cheryl’s Recipe Box</h2>
       <p>Enter the PIN to open the recipe box.</p>
       <form id="pinForm">
@@ -244,15 +83,16 @@
     </div>
   </div>
 
-  <div class="butterfly one">🦋</div>
-  <div class="butterfly two">🦋</div>
+  <img class="butterfly one" src="butterfly.svg" alt="">
+  <img class="butterfly two" src="butterfly.svg" alt="">
+  <img class="butterfly three" src="butterfly.svg" alt="">
+  <img class="butterfly four" src="butterfly.svg" alt="">
+  <img class="butterfly five" src="butterfly.svg" alt="">
+  <img class="butterfly six" src="butterfly.svg" alt="">
 
   <header>
     <div class="wrap nav">
-      <div class="brand">
-        <small>Home cooking</small>
-        <h1>Cheryl’s Recipe Box</h1>
-      </div>
+      <div class="brand"><small>Home cooking</small><h1>Cheryl’s Recipe Box</h1></div>
       <nav>Cozy recipes, zero nonsense.</nav>
     </div>
   </header>
@@ -267,35 +107,16 @@
         <button class="home-button" data-action="all">All Recipes</button>
       </div>
     </section>
-
-    <section id="mainBrowser" class="panel hidden">
-      <h3>Browse by Meat / Main Category</h3>
-      <div id="mainChips" class="chip-row"></div>
-    </section>
-
-    <section id="ethnicityBrowser" class="panel hidden">
-      <h3>Browse by Ethnicity / Cuisine</h3>
-      <div id="ethnicityChips" class="chip-row"></div>
-    </section>
-
-    <section id="recipeResults" class="panel hidden">
-      <h3 id="resultsTitle">Recipes</h3>
-      <div id="recipeList" class="recipe-list"></div>
-    </section>
-
+    <section id="mainBrowser" class="panel hidden"><h3>Browse by Meat / Main Category</h3><div id="mainChips" class="chip-row"></div></section>
+    <section id="ethnicityBrowser" class="panel hidden"><h3>Browse by Ethnicity / Cuisine</h3><div id="ethnicityChips" class="chip-row"></div></section>
+    <section id="recipeResults" class="panel hidden"><h3 id="resultsTitle">Recipes</h3><div id="recipeList" class="recipe-list"></div></section>
     <section id="formPanel" class="panel hidden">
       <h3 id="formTitle">Add New Recipe</h3>
       <form class="form" id="recipeForm">
         <input id="name" placeholder="Recipe name" required />
         <input id="time" placeholder="Cook time (optional)" />
-        <select id="mainCategory" required>
-          <option value="">Choose meat/main category</option>
-          <option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option>
-        </select>
-        <select id="ethnicity" required>
-          <option value="">Choose ethnicity/cuisine</option>
-          <option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option>
-        </select>
+        <select id="mainCategory" required><option value="">Choose meat/main category</option><option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option></select>
+        <select id="ethnicity" required><option value="">Choose ethnicity/cuisine</option><option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option></select>
         <textarea id="notes" class="full" placeholder="Ingredients or notes" required></textarea>
         <button class="btn save full" type="submit">Save Recipe</button>
       </form>
@@ -309,48 +130,11 @@
     const pinForm = document.getElementById('pinForm');
     const pinInput = document.getElementById('pinInput');
     const pinError = document.getElementById('pinError');
-
-    function unlockSite() {
-      try {
-        sessionStorage.setItem(UNLOCK_KEY, 'true');
-      } catch (error) {}
-      pinScreen.classList.add('hidden');
-      pinScreen.style.display = 'none';
-      document.body.classList.remove('locked');
-    }
-
-    function checkPin() {
-      const typedPin = pinInput.value.replace(/\D/g, '').trim();
-      if (typedPin === PIN) {
-        unlockSite();
-        return true;
-      }
-      pinError.textContent = 'Wrong PIN. Try again.';
-      pinInput.value = '';
-      pinInput.focus();
-      return false;
-    }
-
-    try {
-      if (sessionStorage.getItem(UNLOCK_KEY) === 'true') {
-        unlockSite();
-      } else {
-        pinInput.focus();
-      }
-    } catch (error) {
-      pinInput.focus();
-    }
-
-    pinInput.addEventListener('input', () => {
-      pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 4);
-      pinError.textContent = '';
-      if (pinInput.value === PIN) unlockSite();
-    });
-
-    pinForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      checkPin();
-    });
+    function unlockSite() { try { sessionStorage.setItem(UNLOCK_KEY, 'true'); } catch (error) {} pinScreen.classList.add('hidden'); pinScreen.style.display = 'none'; document.body.classList.remove('locked'); }
+    function checkPin() { const typedPin = pinInput.value.replace(/\D/g, '').trim(); if (typedPin === PIN) { unlockSite(); return true; } pinError.textContent = 'Wrong PIN. Try again.'; pinInput.value = ''; pinInput.focus(); return false; }
+    try { if (sessionStorage.getItem(UNLOCK_KEY) === 'true') unlockSite(); else pinInput.focus(); } catch (error) { pinInput.focus(); }
+    pinInput.addEventListener('input', () => { pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 4); pinError.textContent = ''; if (pinInput.value === PIN) unlockSite(); });
+    pinForm.addEventListener('submit', (e) => { e.preventDefault(); checkPin(); });
 
     const STORAGE_KEY = 'cheryl-recipe-box';
     const makeId = () => (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
@@ -358,150 +142,22 @@
       { id: makeId(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
       { id: makeId(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
     ];
-
     const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad'];
     const form = document.getElementById('recipeForm');
     const formTitle = document.getElementById('formTitle');
     const recipeList = document.getElementById('recipeList');
     const resultsTitle = document.getElementById('resultsTitle');
-
     let recipes = loadRecipes();
     let editingId = null;
-
-    function loadRecipes() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return [...defaultRecipes];
-      try {
-        const parsed = JSON.parse(saved);
-        return Array.isArray(parsed) ? parsed : [...defaultRecipes];
-      } catch {
-        return [...defaultRecipes];
-      }
-    }
-
-    function saveRecipes() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes));
-    }
-
-    function hidePanels() {
-      document.querySelectorAll('#mainBrowser, #ethnicityBrowser, #recipeResults, #formPanel').forEach(el => el.classList.add('hidden'));
-    }
-
-    function showPanel(id) {
-      document.getElementById(id).classList.remove('hidden');
-    }
-
-    function renderCategoryChips() {
-      const mainWrap = document.getElementById('mainChips');
-      const ethWrap = document.getElementById('ethnicityChips');
-
-      mainWrap.innerHTML = mainCategories
-        .map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`)
-        .join('');
-
-      const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort();
-      ethWrap.innerHTML = ethnicities
-        .map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`)
-        .join('');
-    }
-
-    function renderRecipes(list, title) {
-      resultsTitle.textContent = title;
-      showPanel('recipeResults');
-
-      if (!list.length) {
-        recipeList.innerHTML = '<p>No recipes yet.</p>';
-        return;
-      }
-
-      recipeList.innerHTML = list.map(r => `
-        <article class="recipe-item">
-          <h4>${r.name}</h4>
-          <div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ` • ${r.time}` : ''}</div>
-          <p>${r.notes}</p>
-          <div class="actions">
-            <button class="btn btn-edit" data-edit-id="${r.id}">Edit</button>
-            <button class="btn btn-delete" data-delete-id="${r.id}">Delete</button>
-          </div>
-        </article>
-      `).join('');
-    }
-
-    document.getElementById('homeView').addEventListener('click', (e) => {
-      const action = e.target.dataset.action;
-      if (!action) return;
-
-      hidePanels();
-      if (action === 'new') {
-        editingId = null;
-        form.reset();
-        formTitle.textContent = 'Add New Recipe';
-        showPanel('formPanel');
-      }
-      if (action === 'main') showPanel('mainBrowser');
-      if (action === 'ethnicity') showPanel('ethnicityBrowser');
-      if (action === 'all') renderRecipes(recipes, 'All Recipes');
-    });
-
-    document.body.addEventListener('click', (e) => {
-      const filterType = e.target.dataset.filterType;
-      const filterValue = e.target.dataset.filterValue;
-      const editId = e.target.dataset.editId;
-      const deleteId = e.target.dataset.deleteId;
-
-      if (filterType && filterValue) {
-        const filtered = recipes.filter(r => r[filterType] === filterValue);
-        renderRecipes(filtered, `${filterValue} Recipes`);
-      }
-
-      if (editId) {
-        const recipe = recipes.find(r => r.id === editId);
-        if (!recipe) return;
-        hidePanels();
-        showPanel('formPanel');
-        editingId = editId;
-        formTitle.textContent = 'Edit Recipe';
-        document.getElementById('name').value = recipe.name;
-        document.getElementById('time').value = recipe.time;
-        document.getElementById('mainCategory').value = recipe.mainCategory;
-        document.getElementById('ethnicity').value = recipe.ethnicity;
-        document.getElementById('notes').value = recipe.notes;
-      }
-
-      if (deleteId) {
-        recipes = recipes.filter(r => r.id !== deleteId);
-        saveRecipes();
-        renderCategoryChips();
-        renderRecipes(recipes, 'All Recipes');
-      }
-    });
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const recipeData = {
-        id: editingId || makeId(),
-        name: document.getElementById('name').value.trim(),
-        time: document.getElementById('time').value.trim(),
-        mainCategory: document.getElementById('mainCategory').value,
-        ethnicity: document.getElementById('ethnicity').value,
-        notes: document.getElementById('notes').value.trim()
-      };
-
-      if (editingId) {
-        recipes = recipes.map(r => (r.id === editingId ? recipeData : r));
-      } else {
-        recipes.push(recipeData);
-      }
-
-      editingId = null;
-      form.reset();
-      formTitle.textContent = 'Add New Recipe';
-      saveRecipes();
-      renderCategoryChips();
-      hidePanels();
-      renderRecipes(recipes, 'All Recipes');
-    });
-
+    function loadRecipes() { const saved = localStorage.getItem(STORAGE_KEY); if (!saved) return [...defaultRecipes]; try { const parsed = JSON.parse(saved); return Array.isArray(parsed) ? parsed : [...defaultRecipes]; } catch { return [...defaultRecipes]; } }
+    function saveRecipes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); }
+    function hidePanels() { document.querySelectorAll('#mainBrowser, #ethnicityBrowser, #recipeResults, #formPanel').forEach(el => el.classList.add('hidden')); }
+    function showPanel(id) { document.getElementById(id).classList.remove('hidden'); }
+    function renderCategoryChips() { document.getElementById('mainChips').innerHTML = mainCategories.map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`).join(''); const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort(); document.getElementById('ethnicityChips').innerHTML = ethnicities.map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`).join(''); }
+    function renderRecipes(list, title) { resultsTitle.textContent = title; showPanel('recipeResults'); recipeList.innerHTML = list.length ? list.map(r => `<article class="recipe-item"><h4>${r.name}</h4><div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ` • ${r.time}` : ''}</div><p>${r.notes}</p><div class="actions"><button class="btn btn-edit" data-edit-id="${r.id}">Edit</button><button class="btn btn-delete" data-delete-id="${r.id}">Delete</button></div></article>`).join('') : '<p>No recipes yet.</p>'; }
+    document.getElementById('homeView').addEventListener('click', (e) => { const action = e.target.dataset.action; if (!action) return; hidePanels(); if (action === 'new') { editingId = null; form.reset(); formTitle.textContent = 'Add New Recipe'; showPanel('formPanel'); } if (action === 'main') showPanel('mainBrowser'); if (action === 'ethnicity') showPanel('ethnicityBrowser'); if (action === 'all') renderRecipes(recipes, 'All Recipes'); });
+    document.body.addEventListener('click', (e) => { const filterType = e.target.dataset.filterType; const filterValue = e.target.dataset.filterValue; const editId = e.target.dataset.editId; const deleteId = e.target.dataset.deleteId; if (filterType && filterValue) renderRecipes(recipes.filter(r => r[filterType] === filterValue), `${filterValue} Recipes`); if (editId) { const recipe = recipes.find(r => r.id === editId); if (!recipe) return; hidePanels(); showPanel('formPanel'); editingId = editId; formTitle.textContent = 'Edit Recipe'; document.getElementById('name').value = recipe.name; document.getElementById('time').value = recipe.time; document.getElementById('mainCategory').value = recipe.mainCategory; document.getElementById('ethnicity').value = recipe.ethnicity; document.getElementById('notes').value = recipe.notes; } if (deleteId) { recipes = recipes.filter(r => r.id !== deleteId); saveRecipes(); renderCategoryChips(); renderRecipes(recipes, 'All Recipes'); } });
+    form.addEventListener('submit', (e) => { e.preventDefault(); const recipeData = { id: editingId || makeId(), name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim() }; recipes = editingId ? recipes.map(r => (r.id === editingId ? recipeData : r)) : [...recipes, recipeData]; editingId = null; form.reset(); formTitle.textContent = 'Add New Recipe'; saveRecipes(); renderCategoryChips(); hidePanels(); renderRecipes(recipes, 'All Recipes'); });
     renderCategoryChips();
   </script>
 </body>
