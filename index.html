@@ -105,7 +105,7 @@
       box-shadow: 0 10px 28px rgba(82, 52, 110, .08);
     }
 
-    .hidden { display: none; }
+    .hidden { display: none !important; }
 
     .chip-row {
       display: flex;
@@ -315,6 +315,7 @@
         sessionStorage.setItem(UNLOCK_KEY, 'true');
       } catch (error) {}
       pinScreen.classList.add('hidden');
+      pinScreen.style.display = 'none';
       document.body.classList.remove('locked');
     }
 
@@ -352,7 +353,7 @@
     });
 
     const STORAGE_KEY = 'cheryl-recipe-box';
-    const makeId = () => (crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+    const makeId = () => (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
     const defaultRecipes = [
       { id: makeId(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
       { id: makeId(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
