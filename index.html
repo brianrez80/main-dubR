@@ -6,14 +6,15 @@
   <title>Cheryl's Recipe Box</title>
   <style>
     :root {
-      --bg: #f7f3ee;
+      --bg: #f4e9ff;
       --card: #ffffff;
-      --text: #26211c;
-      --muted: #6f675f;
-      --line: #e8dfd5;
-      --accent: #2f241c;
-      --soft: #efe6dc;
+      --text: #2a2130;
+      --muted: #75677f;
+      --line: #e4d3f4;
+      --accent: #6f4a8e;
+      --soft: #eadcf8;
       --danger: #8a2d2d;
+      --butterfly: #8b5fbf;
     }
 
     * { box-sizing: border-box; }
@@ -21,9 +22,15 @@
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.75), transparent 32%),
+        var(--bg);
       color: var(--text);
       line-height: 1.5;
+    }
+
+    body.locked {
+      overflow: hidden;
     }
 
     .wrap { max-width: 1100px; margin: 0 auto; padding: 0 22px; }
@@ -31,7 +38,7 @@
     header {
       position: sticky;
       top: 0;
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.88);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--line);
       z-index: 2;
@@ -45,6 +52,28 @@
 
     h2 { margin: 0 0 20px; font-size: 40px; }
 
+    .butterfly {
+      position: fixed;
+      font-size: 46px;
+      color: var(--butterfly);
+      opacity: .7;
+      pointer-events: none;
+      z-index: 1;
+      filter: drop-shadow(0 8px 14px rgba(73, 36, 107, .16));
+    }
+
+    .butterfly.one {
+      top: 118px;
+      right: 42px;
+      transform: rotate(12deg);
+    }
+
+    .butterfly.two {
+      bottom: 50px;
+      left: 34px;
+      transform: rotate(-18deg) scale(.88);
+    }
+
     .home-buttons {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -54,7 +83,7 @@
 
     .home-button {
       border: 2px solid var(--line);
-      background: var(--card);
+      background: rgba(255, 255, 255, .9);
       border-radius: 22px;
       min-height: 120px;
       font-size: 24px;
@@ -65,14 +94,15 @@
       transition: transform .12s ease, box-shadow .12s ease;
     }
 
-    .home-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(42, 31, 22, .08); }
+    .home-button:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(82, 52, 110, .12); }
 
     .panel {
-      background: var(--card);
+      background: rgba(255, 255, 255, .92);
       border: 1px solid var(--line);
       border-radius: 20px;
       padding: 20px;
       margin-bottom: 20px;
+      box-shadow: 0 10px 28px rgba(82, 52, 110, .08);
     }
 
     .hidden { display: none; }
@@ -141,13 +171,82 @@
 
     .save { background: var(--accent); color: #fff; }
 
+    .pin-screen {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(255, 255, 255, .75), transparent 30%),
+        linear-gradient(135deg, #f4e9ff, #ead6ff);
+      z-index: 99;
+    }
+
+    .pin-card {
+      width: min(430px, 100%);
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      padding: 30px;
+      box-shadow: 0 18px 42px rgba(82, 52, 110, .18);
+      text-align: center;
+    }
+
+    .pin-card .pin-butterflies {
+      font-size: 38px;
+      letter-spacing: 8px;
+      margin-bottom: 8px;
+    }
+
+    .pin-card h2 {
+      font-size: 34px;
+      margin-bottom: 8px;
+    }
+
+    .pin-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    .pin-card input {
+      text-align: center;
+      font-size: 24px;
+      letter-spacing: .28em;
+      margin-bottom: 12px;
+    }
+
+    .pin-error {
+      min-height: 22px;
+      color: var(--danger);
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
     @media (max-width: 860px) {
       .home-buttons, .form { grid-template-columns: 1fr; }
       h2 { font-size: 30px; }
+      .butterfly { font-size: 34px; }
     }
   </style>
 </head>
-<body>
+<body class="locked">
+  <div id="pinScreen" class="pin-screen">
+    <div class="pin-card">
+      <div class="pin-butterflies">🦋 🦋</div>
+      <h2>Cheryl’s Recipe Box</h2>
+      <p>Enter the PIN to open the recipe box.</p>
+      <form id="pinForm">
+        <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off" />
+        <button class="btn save" type="submit">Unlock</button>
+        <div id="pinError" class="pin-error"></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="butterfly one">🦋</div>
+  <div class="butterfly two">🦋</div>
+
   <header>
     <div class="wrap nav">
       <div class="brand">
@@ -204,6 +303,36 @@
   </main>
 
   <script>
+    const PIN = '4912';
+    const UNLOCK_KEY = 'cheryl-recipe-box-unlocked';
+    const pinScreen = document.getElementById('pinScreen');
+    const pinForm = document.getElementById('pinForm');
+    const pinInput = document.getElementById('pinInput');
+    const pinError = document.getElementById('pinError');
+
+    function unlockSite() {
+      sessionStorage.setItem(UNLOCK_KEY, 'true');
+      pinScreen.classList.add('hidden');
+      document.body.classList.remove('locked');
+    }
+
+    if (sessionStorage.getItem(UNLOCK_KEY) === 'true') {
+      unlockSite();
+    } else {
+      pinInput.focus();
+    }
+
+    pinForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (pinInput.value === PIN) {
+        unlockSite();
+      } else {
+        pinError.textContent = 'Wrong PIN. Try again.';
+        pinInput.value = '';
+        pinInput.focus();
+      }
+    });
+
     const STORAGE_KEY = 'cheryl-recipe-box';
     const defaultRecipes = [
       { id: crypto.randomUUID(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
@@ -247,7 +376,7 @@
       const ethWrap = document.getElementById('ethnicityChips');
 
       mainWrap.innerHTML = mainCategories
-        .map(category => `<button class="chip" data-filter-type="main" data-filter-value="${category}">${category}</button>`)
+        .map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`)
         .join('');
 
       const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort();
