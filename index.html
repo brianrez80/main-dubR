@@ -237,7 +237,7 @@
       <h2>Cheryl’s Recipe Box</h2>
       <p>Enter the PIN to open the recipe box.</p>
       <form id="pinForm">
-        <input id="pinInput" type="password" inputmode="numeric" maxlength="4" placeholder="••••" autocomplete="off" />
+        <input id="pinInput" type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="4912" autocomplete="off" />
         <button class="btn save" type="submit">Unlock</button>
         <div id="pinError" class="pin-error"></div>
       </form>
@@ -311,32 +311,51 @@
     const pinError = document.getElementById('pinError');
 
     function unlockSite() {
-      sessionStorage.setItem(UNLOCK_KEY, 'true');
+      try {
+        sessionStorage.setItem(UNLOCK_KEY, 'true');
+      } catch (error) {}
       pinScreen.classList.add('hidden');
       document.body.classList.remove('locked');
     }
 
-    if (sessionStorage.getItem(UNLOCK_KEY) === 'true') {
-      unlockSite();
-    } else {
+    function checkPin() {
+      const typedPin = pinInput.value.replace(/\D/g, '').trim();
+      if (typedPin === PIN) {
+        unlockSite();
+        return true;
+      }
+      pinError.textContent = 'Wrong PIN. Try again.';
+      pinInput.value = '';
+      pinInput.focus();
+      return false;
+    }
+
+    try {
+      if (sessionStorage.getItem(UNLOCK_KEY) === 'true') {
+        unlockSite();
+      } else {
+        pinInput.focus();
+      }
+    } catch (error) {
       pinInput.focus();
     }
 
+    pinInput.addEventListener('input', () => {
+      pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 4);
+      pinError.textContent = '';
+      if (pinInput.value === PIN) unlockSite();
+    });
+
     pinForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (pinInput.value === PIN) {
-        unlockSite();
-      } else {
-        pinError.textContent = 'Wrong PIN. Try again.';
-        pinInput.value = '';
-        pinInput.focus();
-      }
+      checkPin();
     });
 
     const STORAGE_KEY = 'cheryl-recipe-box';
+    const makeId = () => (crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
     const defaultRecipes = [
-      { id: crypto.randomUUID(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
-      { id: crypto.randomUUID(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
+      { id: makeId(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
+      { id: makeId(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
     ];
 
     const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad'];
@@ -459,7 +478,7 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const recipeData = {
-        id: editingId || crypto.randomUUID(),
+        id: editingId || makeId(),
         name: document.getElementById('name').value.trim(),
         time: document.getElementById('time').value.trim(),
         mainCategory: document.getElementById('mainCategory').value,
