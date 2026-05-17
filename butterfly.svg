@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 135" role="img" aria-label="purple butterfly">
+  <defs>
+    <radialGradient id="wing" cx="35%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#fff5ff"/>
+      <stop offset="0.35" stop-color="#c99be8"/>
+      <stop offset="0.75" stop-color="#7a42a4"/>
+      <stop offset="1" stop-color="#3a2450"/>
+    </radialGradient>
+    <linearGradient id="body" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#60406f"/>
+      <stop offset="1" stop-color="#1e1524"/>
+    </linearGradient>
+  </defs>
+  <path d="M89 65 C68 17 22 2 10 29 C-5 65 29 91 75 75 C45 96 43 128 68 130 C88 132 92 98 90 75 Z" fill="url(#wing)" stroke="#2d1a3d" stroke-width="3"/>
+  <path d="M91 65 C112 17 158 2 170 29 C185 65 151 91 105 75 C135 96 137 128 112 130 C92 132 88 98 90 75 Z" fill="url(#wing)" stroke="#2d1a3d" stroke-width="3"/>
+  <path d="M89 58 C78 36 55 23 41 31 C35 35 38 48 51 58 C62 66 75 66 87 63 Z" fill="#f4d8ff" opacity=".55"/>
+  <path d="M91 58 C102 36 125 23 139 31 C145 35 142 48 129 58 C118 66 105 66 93 63 Z" fill="#f4d8ff" opacity=".55"/>
+  <ellipse cx="90" cy="72" rx="8" ry="38" fill="url(#body)"/>
+  <circle cx="90" cy="33" r="7" fill="#24152c"/>
+  <path d="M86 29 C74 14 63 9 53 7" fill="none" stroke="#24152c" stroke-width="4" stroke-linecap="round"/>
+  <path d="M94 29 C106 14 117 9 127 7" fill="none" stroke="#24152c" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="52" cy="7" r="3" fill="#24152c"/>
+  <circle cx="128" cy="7" r="3" fill="#24152c"/>
+  <circle cx="56" cy="50" r="5" fill="#ffffff" opacity=".65"/>
+  <circle cx="124" cy="50" r="5" fill="#ffffff" opacity=".65"/>
+  <circle cx="66" cy="82" r="4" fill="#2f1d40" opacity=".7"/>
+  <circle cx="114" cy="82" r="4" fill="#2f1d40" opacity=".7"/>
+</svg>
