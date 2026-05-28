@@ -170,6 +170,30 @@
       return url.startsWith(prefix) ? url.slice(prefix.length) : null;
     }
 
+    function mapDbRecipe(row) {
+      return {
+        id: row.id,
+        name: row.name,
+        time: row.cook_time || '',
+        mainCategory: row.main_category || '',
+        ethnicity: row.ethnicity,
+        notes: row.notes,
+        image_url: row.image_url || null
+      };
+    }
+
+    function mapRecipeToDb(recipe) {
+      return {
+        id: recipe.id,
+        name: recipe.name,
+        cook_time: recipe.time,
+        main_category: recipe.mainCategory,
+        ethnicity: recipe.ethnicity,
+        notes: recipe.notes,
+        image_url: recipe.image_url || null
+      };
+    }
+
     function renderCategoryChips() { document.getElementById('mainChips').innerHTML = mainCategories.map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`).join(''); const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort(); document.getElementById('ethnicityChips').innerHTML = ethnicities.map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`).join(''); }
     function renderRecipes(list, title) { resultsTitle.textContent = title; showPanel('recipeResults'); recipeList.innerHTML = list.length ? list.map(r => {
         const imageUrl = r.image_url || '';
@@ -178,12 +202,12 @@
     }
 
     async function fetchRecipes() {
-      const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('name');
+      const { data, error } = await supabaseClient.from(TABLE_NAME).select('id, name, cook_time, main_category, ethnicity, notes, image_url').order('name');
       if (error) {
         console.error('Unable to load recipes from Supabase', error);
         recipes = [...DEFAULT_RECIPES];
       } else {
-        recipes = Array.isArray(data) ? data : [];
+        recipes = Array.isArray(data) ? data.map(mapDbRecipe) : [];
       }
       renderCategoryChips();
     }
@@ -193,6 +217,9 @@
       const filePath = `recipes/${recipeId}/${Date.now()}-${file.name}`;
       const { error } = await supabaseClient.storage.from(STORAGE_BUCKET).upload(filePath, file);
       if (error) {
+        const message = error.message || 'Image upload failed';
+        const details = error.details ? `\n${error.details}` : '';
+        alert(`Unable to upload image: ${message}${details}`);
         console.error('Image upload failed', error);
         return null;
       }
@@ -211,19 +238,30 @@
     }
 
     async function saveRecipe(recipe) {
+      const dbRecipe = mapRecipeToDb(recipe);
       if (editingId) {
-        const { error } = await supabaseClient.from(TABLE_NAME).update(recipe).eq('id', recipe.id);
-        if (error) throw error;
+        const { error } = await supabaseClient.from(TABLE_NAME).update(dbRecipe).eq('id', recipe.id);
+        if (error) {
+          const message = error.message || 'Recipe update failed';
+          const details = error.details ? `\n${error.details}` : '';
+          alert(`Unable to save recipe: ${message}${details}`);
+          throw error;
+        }
       } else {
-        const { error } = await supabaseClient.from(TABLE_NAME).insert(recipe);
-        if (error) throw error;
+        const { error } = await supabaseClient.from(TABLE_NAME).insert(dbRecipe);
+        if (error) {
+          const message = error.message || 'Recipe insert failed';
+          const details = error.details ? `\n${error.details}` : '';
+          alert(`Unable to save recipe: ${message}${details}`);
+          throw error;
+        }
       }
     }
 
     document.getElementById('homeView').addEventListener('click', (e) => { const action = e.target.dataset.action; if (!action) return; hidePanels(); if (action === 'new') { editingId = null; editingImagePath = null; form.reset(); formTitle.textContent = 'Add New Recipe'; showPanel('formPanel'); } if (action === 'main') showPanel('mainBrowser'); if (action === 'ethnicity') showPanel('ethnicityBrowser'); if (action === 'all') renderRecipes(recipes, 'All Recipes'); });
     document.body.addEventListener('click', async (e) => { const filterType = e.target.dataset.filterType; const filterValue = e.target.dataset.filterValue; const editId = e.target.dataset.editId; const deleteId = e.target.dataset.deleteId; if (filterType && filterValue) renderRecipes(recipes.filter(r => r[filterType] === filterValue), `${filterValue} Recipes`); if (editId) { const recipe = recipes.find(r => r.id === editId); if (!recipe) return; hidePanels(); showPanel('formPanel'); editingId = editId; editingImagePath = recipe.image_url ? getStoragePathFromUrl(recipe.image_url) : null; formTitle.textContent = 'Edit Recipe'; document.getElementById('name').value = recipe.name; document.getElementById('time').value = recipe.time; document.getElementById('mainCategory').value = recipe.mainCategory; document.getElementById('ethnicity').value = recipe.ethnicity; document.getElementById('notes').value = recipe.notes; imageInput.value = ''; } if (deleteId) { const recipe = recipes.find(r => r.id === deleteId); if (!recipe) return; await supabaseClient.from(TABLE_NAME).delete().eq('id', deleteId); if (recipe.image_url) await deleteImage(recipe.image_url); recipes = recipes.filter(r => r.id !== deleteId); renderCategoryChips(); renderRecipes(recipes, 'All Recipes'); } });
-    form.addEventListener('submit', async (e) => { e.preventDefault(); const recipeId = editingId || makeId(); const recipeData = { id: recipeId, name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim(), image_url: null }; const newImageFile = imageInput.files[0]; if (newImageFile) { const uploaded = await uploadImage(recipeId, newImageFile); if (uploaded && uploaded.publicUrl) { if (editingImagePath && editingImagePath !== uploaded.path) await deleteImage(editingImagePath); recipeData.image_url = uploaded.publicUrl; editingImagePath = uploaded.path; } } else if (editingId && editingImagePath) { const existingRecipe = recipes.find(r => r.id === editingId); recipeData.image_url = existingRecipe?.image_url || null; }
-      try { await saveRecipe(recipeData); } catch (error) { console.error('Unable to save recipe', error); }
+    form.addEventListener('submit', async (e) => { e.preventDefault(); const recipeId = editingId || makeId(); const recipeData = { id: recipeId, name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim(), image_url: null }; const newImageFile = imageInput.files[0]; if (newImageFile) { const uploaded = await uploadImage(recipeId, newImageFile); if (!uploaded) return; if (uploaded.publicUrl) { if (editingImagePath && editingImagePath !== uploaded.path) await deleteImage(editingImagePath); recipeData.image_url = uploaded.publicUrl; editingImagePath = uploaded.path; } } else if (editingId && editingImagePath) { const existingRecipe = recipes.find(r => r.id === editingId); recipeData.image_url = existingRecipe?.image_url || null; }
+      try { await saveRecipe(recipeData); } catch (error) { console.error('Unable to save recipe', error); return; }
       if (editingId) { recipes = recipes.map(r => r.id === recipeId ? recipeData : r); } else { recipes = [...recipes, recipeData]; }
       editingId = null;
       editingImagePath = null;
