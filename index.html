@@ -48,6 +48,7 @@
     .recipe-list { display: grid; gap: 14px; }
     .recipe-item { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: #fff; }
     .recipe-item h4 { margin: 0 0 6px; }
+    .recipe-item img { width: 100%; border-radius: 12px; margin: 12px 0; height: auto; object-fit: cover; }
     .meta { color: var(--muted); font-size: 14px; margin-bottom: 8px; }
     .actions { display: flex; gap: 8px; margin-top: 10px; }
     .btn { border: none; border-radius: 10px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
@@ -99,7 +100,7 @@
 
   <main class="wrap">
     <section id="homeView">
-      <h2>Choose what Cheryl wants to do</h2>
+      <h2>What does Cheryl want to do</h2>
       <div class="home-buttons">
         <button class="home-button" data-action="new">Add New Recipe</button>
         <button class="home-button" data-action="main">Browse by Meat / Main Category</button>
@@ -118,47 +119,120 @@
         <select id="mainCategory" required><option value="">Choose meat/main category</option><option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option></select>
         <select id="ethnicity" required><option value="">Choose ethnicity/cuisine</option><option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option></select>
         <textarea id="notes" class="full" placeholder="Ingredients or notes" required></textarea>
+        <label class="full" for="image">Recipe image (optional)</label>
+        <input id="image" type="file" accept="image/*" />
         <button class="btn save full" type="submit">Save Recipe</button>
       </form>
     </section>
   </main>
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const PIN = '4912';
+    const SUPABASE_URL = 'https://knpovxbqoohsddquiyjv.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_dW3jNFrs9G4zmkdeL968NA_yGRv8A6a';
+    const TABLE_NAME = 'recipes';
+    const STORAGE_BUCKET = 'recipe-images';
+
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const UNLOCK_KEY = 'cheryl-recipe-box-unlocked';
     const pinScreen = document.getElementById('pinScreen');
     const pinForm = document.getElementById('pinForm');
     const pinInput = document.getElementById('pinInput');
     const pinError = document.getElementById('pinError');
+    const imageInput = document.getElementById('image');
+    const form = document.getElementById('recipeForm');
+    const formTitle = document.getElementById('formTitle');
+    const recipeList = document.getElementById('recipeList');
+    const resultsTitle = document.getElementById('resultsTitle');
+
+    let recipes = [];
+    let editingId = null;
+    let editingImagePath = null;
+
     function unlockSite() { try { sessionStorage.setItem(UNLOCK_KEY, 'true'); } catch (error) {} pinScreen.classList.add('hidden'); pinScreen.style.display = 'none'; document.body.classList.remove('locked'); }
     function checkPin() { const typedPin = pinInput.value.replace(/\D/g, '').trim(); if (typedPin === PIN) { unlockSite(); return true; } pinError.textContent = 'Wrong PIN. Try again.'; pinInput.value = ''; pinInput.focus(); return false; }
     try { if (sessionStorage.getItem(UNLOCK_KEY) === 'true') unlockSite(); else pinInput.focus(); } catch (error) { pinInput.focus(); }
     pinInput.addEventListener('input', () => { pinInput.value = pinInput.value.replace(/\D/g, '').slice(0, 4); pinError.textContent = ''; if (pinInput.value === PIN) unlockSite(); });
     pinForm.addEventListener('submit', (e) => { e.preventDefault(); checkPin(); });
 
-    const STORAGE_KEY = 'cheryl-recipe-box';
     const makeId = () => (window.crypto && window.crypto.randomUUID ? window.crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
-    const defaultRecipes = [
+    const DEFAULT_RECIPES = [
       { id: makeId(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
       { id: makeId(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
     ];
     const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad'];
-    const form = document.getElementById('recipeForm');
-    const formTitle = document.getElementById('formTitle');
-    const recipeList = document.getElementById('recipeList');
-    const resultsTitle = document.getElementById('resultsTitle');
-    let recipes = loadRecipes();
-    let editingId = null;
-    function loadRecipes() { const saved = localStorage.getItem(STORAGE_KEY); if (!saved) return [...defaultRecipes]; try { const parsed = JSON.parse(saved); return Array.isArray(parsed) ? parsed : [...defaultRecipes]; } catch { return [...defaultRecipes]; } }
-    function saveRecipes() { localStorage.setItem(STORAGE_KEY, JSON.stringify(recipes)); }
+
     function hidePanels() { document.querySelectorAll('#mainBrowser, #ethnicityBrowser, #recipeResults, #formPanel').forEach(el => el.classList.add('hidden')); }
     function showPanel(id) { document.getElementById(id).classList.remove('hidden'); }
+    function getStoragePathFromUrl(url) {
+      if (!url) return null;
+      const prefix = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/`;
+      return url.startsWith(prefix) ? url.slice(prefix.length) : null;
+    }
+
     function renderCategoryChips() { document.getElementById('mainChips').innerHTML = mainCategories.map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`).join(''); const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort(); document.getElementById('ethnicityChips').innerHTML = ethnicities.map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`).join(''); }
-    function renderRecipes(list, title) { resultsTitle.textContent = title; showPanel('recipeResults'); recipeList.innerHTML = list.length ? list.map(r => `<article class="recipe-item"><h4>${r.name}</h4><div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ` • ${r.time}` : ''}</div><p>${r.notes}</p><div class="actions"><button class="btn btn-edit" data-edit-id="${r.id}">Edit</button><button class="btn btn-delete" data-delete-id="${r.id}">Delete</button></div></article>`).join('') : '<p>No recipes yet.</p>'; }
-    document.getElementById('homeView').addEventListener('click', (e) => { const action = e.target.dataset.action; if (!action) return; hidePanels(); if (action === 'new') { editingId = null; form.reset(); formTitle.textContent = 'Add New Recipe'; showPanel('formPanel'); } if (action === 'main') showPanel('mainBrowser'); if (action === 'ethnicity') showPanel('ethnicityBrowser'); if (action === 'all') renderRecipes(recipes, 'All Recipes'); });
-    document.body.addEventListener('click', (e) => { const filterType = e.target.dataset.filterType; const filterValue = e.target.dataset.filterValue; const editId = e.target.dataset.editId; const deleteId = e.target.dataset.deleteId; if (filterType && filterValue) renderRecipes(recipes.filter(r => r[filterType] === filterValue), `${filterValue} Recipes`); if (editId) { const recipe = recipes.find(r => r.id === editId); if (!recipe) return; hidePanels(); showPanel('formPanel'); editingId = editId; formTitle.textContent = 'Edit Recipe'; document.getElementById('name').value = recipe.name; document.getElementById('time').value = recipe.time; document.getElementById('mainCategory').value = recipe.mainCategory; document.getElementById('ethnicity').value = recipe.ethnicity; document.getElementById('notes').value = recipe.notes; } if (deleteId) { recipes = recipes.filter(r => r.id !== deleteId); saveRecipes(); renderCategoryChips(); renderRecipes(recipes, 'All Recipes'); } });
-    form.addEventListener('submit', (e) => { e.preventDefault(); const recipeData = { id: editingId || makeId(), name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim() }; recipes = editingId ? recipes.map(r => (r.id === editingId ? recipeData : r)) : [...recipes, recipeData]; editingId = null; form.reset(); formTitle.textContent = 'Add New Recipe'; saveRecipes(); renderCategoryChips(); hidePanels(); renderRecipes(recipes, 'All Recipes'); });
-    renderCategoryChips();
+    function renderRecipes(list, title) { resultsTitle.textContent = title; showPanel('recipeResults'); recipeList.innerHTML = list.length ? list.map(r => {
+        const imageUrl = r.image_url || '';
+        return `<article class="recipe-item"><h4>${r.name}</h4><div class="meta">${r.mainCategory} • ${r.ethnicity}${r.time ? ` • ${r.time}` : ''}</div>${imageUrl ? `<img src="${imageUrl}" alt="${r.name}">` : ''}<p>${r.notes}</p><div class="actions"><button class="btn btn-edit" data-edit-id="${r.id}">Edit</button><button class="btn btn-delete" data-delete-id="${r.id}">Delete</button></div></article>`;
+      }).join('') : '<p>No recipes yet.</p>';
+    }
+
+    async function fetchRecipes() {
+      const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('name');
+      if (error) {
+        console.error('Unable to load recipes from Supabase', error);
+        recipes = [...DEFAULT_RECIPES];
+      } else {
+        recipes = Array.isArray(data) ? data : [];
+      }
+      renderCategoryChips();
+    }
+
+    async function uploadImage(recipeId, file) {
+      if (!file) return null;
+      const filePath = `recipes/${recipeId}/${Date.now()}-${file.name}`;
+      const { error } = await supabaseClient.storage.from(STORAGE_BUCKET).upload(filePath, file);
+      if (error) {
+        console.error('Image upload failed', error);
+        return null;
+      }
+      const { data } = supabaseClient.storage.from(STORAGE_BUCKET).getPublicUrl(filePath);
+      return { path: filePath, publicUrl: data?.publicUrl || '' };
+    }
+
+    async function deleteImage(pathOrUrl) {
+      if (!pathOrUrl) return;
+      const filePath = pathOrUrl.startsWith('http') ? getStoragePathFromUrl(pathOrUrl) : pathOrUrl;
+      if (!filePath) return;
+      const { error } = await supabaseClient.storage.from(STORAGE_BUCKET).remove([filePath]);
+      if (error) {
+        console.warn('Unable to delete image', error);
+      }
+    }
+
+    async function saveRecipe(recipe) {
+      if (editingId) {
+        const { error } = await supabaseClient.from(TABLE_NAME).update(recipe).eq('id', recipe.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseClient.from(TABLE_NAME).insert(recipe);
+        if (error) throw error;
+      }
+    }
+
+    document.getElementById('homeView').addEventListener('click', (e) => { const action = e.target.dataset.action; if (!action) return; hidePanels(); if (action === 'new') { editingId = null; editingImagePath = null; form.reset(); formTitle.textContent = 'Add New Recipe'; showPanel('formPanel'); } if (action === 'main') showPanel('mainBrowser'); if (action === 'ethnicity') showPanel('ethnicityBrowser'); if (action === 'all') renderRecipes(recipes, 'All Recipes'); });
+    document.body.addEventListener('click', async (e) => { const filterType = e.target.dataset.filterType; const filterValue = e.target.dataset.filterValue; const editId = e.target.dataset.editId; const deleteId = e.target.dataset.deleteId; if (filterType && filterValue) renderRecipes(recipes.filter(r => r[filterType] === filterValue), `${filterValue} Recipes`); if (editId) { const recipe = recipes.find(r => r.id === editId); if (!recipe) return; hidePanels(); showPanel('formPanel'); editingId = editId; editingImagePath = recipe.image_url ? getStoragePathFromUrl(recipe.image_url) : null; formTitle.textContent = 'Edit Recipe'; document.getElementById('name').value = recipe.name; document.getElementById('time').value = recipe.time; document.getElementById('mainCategory').value = recipe.mainCategory; document.getElementById('ethnicity').value = recipe.ethnicity; document.getElementById('notes').value = recipe.notes; imageInput.value = ''; } if (deleteId) { const recipe = recipes.find(r => r.id === deleteId); if (!recipe) return; await supabaseClient.from(TABLE_NAME).delete().eq('id', deleteId); if (recipe.image_url) await deleteImage(recipe.image_url); recipes = recipes.filter(r => r.id !== deleteId); renderCategoryChips(); renderRecipes(recipes, 'All Recipes'); } });
+    form.addEventListener('submit', async (e) => { e.preventDefault(); const recipeId = editingId || makeId(); const recipeData = { id: recipeId, name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim(), image_url: null }; const newImageFile = imageInput.files[0]; if (newImageFile) { const uploaded = await uploadImage(recipeId, newImageFile); if (uploaded && uploaded.publicUrl) { if (editingImagePath && editingImagePath !== uploaded.path) await deleteImage(editingImagePath); recipeData.image_url = uploaded.publicUrl; editingImagePath = uploaded.path; } } else if (editingId && editingImagePath) { const existingRecipe = recipes.find(r => r.id === editingId); recipeData.image_url = existingRecipe?.image_url || null; }
+      try { await saveRecipe(recipeData); } catch (error) { console.error('Unable to save recipe', error); }
+      if (editingId) { recipes = recipes.map(r => r.id === recipeId ? recipeData : r); } else { recipes = [...recipes, recipeData]; }
+      editingId = null;
+      editingImagePath = null;
+      form.reset();
+      formTitle.textContent = 'Add New Recipe';
+      renderCategoryChips();
+      hidePanels();
+      renderRecipes(recipes, 'All Recipes'); });
+    fetchRecipes();
   </script>
 </body>
 </html>
