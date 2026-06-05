@@ -234,6 +234,34 @@
       });
     }
 
+    async function compressImageFile(file) {
+      try {
+        const originalDataUrl = await fileToDataUrl(file);
+        const img = new Image();
+        const loadedImage = new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        img.src = originalDataUrl;
+        await loadedImage;
+
+        const maxSide = 1200;
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const width = Math.max(1, Math.round(img.width * scale));
+        const height = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext('2d');
+        if (!context) return originalDataUrl;
+        context.drawImage(img, 0, 0, width, height);
+        return canvas.toDataURL('image/jpeg', 0.72);
+      } catch (error) {
+        console.warn('Unable to compress image before saving', error);
+        return fileToDataUrl(file);
+      }
+    }
+
     async function fetchRecipes() {
       const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('name');
       if (error) {
@@ -293,7 +321,7 @@
 
     document.getElementById('homeView').addEventListener('click', (e) => { const action = e.target.dataset.action; if (!action) return; hidePanels(); if (action === 'new') { editingId = null; editingImagePath = null; form.reset(); formTitle.textContent = 'Add New Recipe'; showPanel('formPanel'); } if (action === 'main') showPanel('mainBrowser'); if (action === 'ethnicity') showPanel('ethnicityBrowser'); if (action === 'all') renderRecipes(recipes, 'All Recipes'); });
     document.body.addEventListener('click', async (e) => { const filterType = e.target.dataset.filterType; const filterValue = e.target.dataset.filterValue; const editId = e.target.dataset.editId; const deleteId = e.target.dataset.deleteId; if (filterType && filterValue) renderRecipes(recipes.filter(r => r[filterType] === filterValue), `${filterValue} Recipes`); if (editId) { const recipe = recipes.find(r => r.id === editId); if (!recipe) return; hidePanels(); showPanel('formPanel'); editingId = editId; formTitle.textContent = 'Edit Recipe'; document.getElementById('name').value = recipe.name; document.getElementById('time').value = recipe.time; document.getElementById('mainCategory').value = recipe.mainCategory; document.getElementById('ethnicity').value = recipe.ethnicity; document.getElementById('notes').value = recipe.notes; imageInput.value = ''; } if (deleteId) { const recipe = recipes.find(r => r.id === deleteId); if (!recipe) return; await supabaseClient.from(TABLE_NAME).delete().eq('id', deleteId); recipes = recipes.filter(r => r.id !== deleteId); renderCategoryChips(); renderRecipes(recipes, 'All Recipes'); } });
-    form.addEventListener('submit', async (e) => { e.preventDefault(); const recipeId = editingId || makeId(); const existingRecipe = editingId ? recipes.find(r => r.id === editingId) : null; const selectedImages = Array.from(image.files || []); const images = selectedImages.length ? await Promise.all(selectedImages.map(fileToDataUrl)) : (existingRecipe ? getRecipeImages(existingRecipe) : []); const recipeData = { id: recipeId, name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim(), images };
+    form.addEventListener('submit', async (e) => { e.preventDefault(); const recipeId = editingId || makeId(); const existingRecipe = editingId ? recipes.find(r => r.id === editingId) : null; const selectedImages = Array.from(image.files || []); if (selectedImages.length > 2) { alert('Please select 2 images or fewer for now.'); return; } const images = selectedImages.length ? await Promise.all(selectedImages.map(compressImageFile)) : (existingRecipe ? getRecipeImages(existingRecipe) : []); const recipeData = { id: recipeId, name: document.getElementById('name').value.trim(), time: document.getElementById('time').value.trim(), mainCategory: document.getElementById('mainCategory').value, ethnicity: document.getElementById('ethnicity').value, notes: document.getElementById('notes').value.trim(), images };
       try { await saveRecipe(recipeData); } catch (error) { console.error('Unable to save recipe', error); return; }
       if (editingId) { recipes = recipes.map(r => r.id === recipeId ? recipeData : r); } else { recipes = [...recipes, recipeData]; }
       editingId = null;
