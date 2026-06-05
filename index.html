@@ -177,14 +177,17 @@
       return url.startsWith(prefix) ? url.slice(prefix.length) : null;
     }
 
-    function parseRecipeImages(imageValue, imageUrl) {
-      if (!imageValue && !imageUrl) return [];
-      if (!imageValue) return [imageUrl];
-      try {
-        const parsed = JSON.parse(imageValue);
-        if (Array.isArray(parsed)) return parsed.filter(Boolean);
-      } catch (error) {}
-      return [imageValue];
+    function parseRecipeImages(...values) {
+      for (const value of values) {
+        if (!value) continue;
+        if (Array.isArray(value)) return value.filter(Boolean);
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) return parsed.filter(Boolean);
+        } catch (error) {}
+        return [value];
+      }
+      return [];
     }
 
     function mapDbRecipe(row) {
@@ -196,6 +199,7 @@
         ethnicity: row.ethnicity,
         notes: row.notes,
         image: row.image || null,
+        images: Array.isArray(row.images) ? row.images : null,
         image_url: row.image_url || null
       };
     }
@@ -208,12 +212,12 @@
         main_category: recipe.mainCategory,
         ethnicity: recipe.ethnicity,
         notes: recipe.notes,
-        image: JSON.stringify(Array.isArray(recipe.images) ? recipe.images : [])
+        image_url: JSON.stringify(Array.isArray(recipe.images) ? recipe.images : [])
       };
     }
 
     function renderCategoryChips() { document.getElementById('mainChips').innerHTML = mainCategories.map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`).join(''); const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort(); document.getElementById('ethnicityChips').innerHTML = ethnicities.map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`).join(''); }
-    function getRecipeImages(recipe) { return Array.isArray(recipe.images) && recipe.images.length ? recipe.images : parseRecipeImages(recipe.image, recipe.image_url); }
+    function getRecipeImages(recipe) { return parseRecipeImages(recipe.image_url, recipe.images, recipe.image); }
     function renderRecipes(list, title) { resultsTitle.textContent = title; showPanel('recipeResults'); recipeList.innerHTML = list.length ? list.map(r => {
         const images = getRecipeImages(r);
         const imageHtml = images.map((imageUrl, index) => `<img src="${imageUrl}" alt="${r.name}${images.length > 1 ? ` image ${index + 1}` : ''}">`).join('');
