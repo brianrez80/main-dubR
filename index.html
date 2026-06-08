@@ -176,7 +176,14 @@
     const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad', 'Dessert', 'Sweets', 'Appetizers'];
 
     function hidePanels() { document.querySelectorAll('#mainBrowser, #ethnicityBrowser, #recipeResults, #formPanel').forEach(el => el.classList.add('hidden')); }
-    function showPanel(id) { document.getElementById(id).classList.remove('hidden'); }
+    
+  function showPanel(id) {
+  const panel = document.getElementById(id);
+  panel.classList.remove('hidden');
+  setTimeout(() => {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
     function getStoragePathFromUrl(url) {
       if (!url) return null;
       const prefix = `${SUPABASE_URL}/storage/v1/object/public/${STORAGE_BUCKET}/`;
