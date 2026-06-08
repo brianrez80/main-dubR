@@ -124,7 +124,13 @@
         <input id="name" placeholder="Recipe name" required />
         <input id="time" placeholder="Cook time (optional)" />
         <select id="mainCategory" required><option value="">Choose meat/main category</option><option>Chicken</option><option>Beef</option><option>Pork</option><option>Fish</option><option>Salad</option><option>Dessert</option><option>Sweets</option><option>Appetizers</option></select>
-        <select id="ethnicity" required><option value="">Choose ethnicity/cuisine</option><option>American</option><option>Mexican</option><option>Italian</option><option>Asian</option><option>Mediterranean</option><option>Other</option></select>
+        <select id="ethnicity" required><option value="">Choose ethnicity/cuisine</option>
+          <option>American</option>
+          <option>Mexican</option>
+          <option>Italian</option>
+          <option>Asian</option>
+          <option>Mediterranean</option>
+          <option>Other</option></select>
         <textarea id="notes" class="full" placeholder="Ingredients or notes" required></textarea>
         <label class="full" for="image">Recipe image (optional)</label>
         <input id="image" type="file" accept="image/*" multiple />
@@ -167,7 +173,7 @@
       { id: makeId(), name: 'Loaded Chicken Potato Bake', time: '50 min', mainCategory: 'Chicken', ethnicity: 'American', notes: 'Comfort food, done right.' },
       { id: makeId(), name: 'Greek Garden Salad', time: '20 min', mainCategory: 'Salad', ethnicity: 'Mediterranean', notes: 'Crisp, fresh, and easy.' }
     ];
-    const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad'];
+    const mainCategories = ['Chicken', 'Beef', 'Pork', 'Fish', 'Salad', 'Dessert', 'Sweets', 'Appetizers'];
 
     function hidePanels() { document.querySelectorAll('#mainBrowser, #ethnicityBrowser, #recipeResults, #formPanel').forEach(el => el.classList.add('hidden')); }
     function showPanel(id) { document.getElementById(id).classList.remove('hidden'); }
