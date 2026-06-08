@@ -222,7 +222,7 @@
       };
     }
 
-    function renderCategoryChips() { document.getElementById('mainChips').innerHTML = mainCategories.map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`).join(''); const ethnicities = [...new Set(recipes.map(r => r.ethnicity))].sort(); document.getElementById('ethnicityChips').innerHTML = ethnicities.map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`).join(''); }
+    function renderCategoryChips() { document.getElementById('mainChips').innerHTML = mainCategories.map(category => `<button class="chip" data-filter-type="mainCategory" data-filter-value="${category}">${category}</button>`).join(''); const ethnicities = ['American', 'Mexican', 'Italian', 'Asian', 'Mediterranean', 'Other']; document.getElementById('ethnicityChips').innerHTML = ethnicities.map(eth => `<button class="chip" data-filter-type="ethnicity" data-filter-value="${eth}">${eth}</button>`).join(''); }
     function getRecipeImages(recipe) { return parseRecipeImages(recipe.image_url, recipe.images, recipe.image); }
     function renderRecipes(list, title) { resultsTitle.textContent = title; showPanel('recipeResults'); recipeList.innerHTML = list.length ? list.map(r => {
         const images = getRecipeImages(r);
