@@ -287,7 +287,35 @@
         console.warn('Unable to delete image', error);
       }
     }
+function compressImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
+    reader.onload = function (event) {
+      const img = new Image();
+
+      img.onload = function () {
+        const canvas = document.createElement("canvas");
+        const maxWidth = 900;
+        const scale = Math.min(1, maxWidth / img.width);
+
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        resolve(canvas.toDataURL("image/jpeg", 0.75));
+      };
+
+      img.onerror = reject;
+      img.src = event.target.result;
+    };
+
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
     async function saveRecipe(recipe) {
       const dbRecipe = mapRecipeToDb(recipe);
       if (editingId) {
