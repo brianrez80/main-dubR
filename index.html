@@ -75,6 +75,20 @@
     .pin-card input { text-align: center; font-size: 24px; letter-spacing: .28em; margin-bottom: 12px; }
     .pin-error { min-height: 22px; color: var(--danger); font-weight: 700; margin-top: 10px; }
     @media (max-width: 860px) { .home-buttons, .form { grid-template-columns: 1fr; } h2 { font-size: 30px; } .butterfly { width: 54px; } .butterfly.three, .butterfly.five, .butterfly.six { display: none; } }
+    #backToTopBtn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: #8b5cf6;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 9999;
+  display: none;
+}
   </style>
 </head>
 <body class="locked">
@@ -250,7 +264,19 @@
       }
       return imageUrls;
     }
+const backToTopBtn = document.getElementById("backToTopBtn");
 
+window.addEventListener("scroll", () => {
+  backToTopBtn.style.display =
+    window.scrollY > 300 ? "block" : "none";
+});
+
+backToTopBtn.addEventListener("click", () => {
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+});
     async function fetchRecipes() {
       const { data, error } = await supabaseClient.from(TABLE_NAME).select('*').order('name');
       if (error) {
@@ -350,5 +376,6 @@ function compressImageFile(file) {
       renderRecipes(recipes, 'All Recipes'); });
     fetchRecipes();
   </script>
+  <button id="backToTopBtn" title="Back to top">↑ Top</button>
 </body>
 </html>
