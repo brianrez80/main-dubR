@@ -68,7 +68,7 @@ async function approveDraftRecipe(recipeId, editorName, updates) {
     const now = new Date().toISOString();
     const updatedRecipe = {
       ...updates,
-      status: 'published',
+      status: 'approved',
       reviewedBy: editorName,
       reviewedAt: now
     };

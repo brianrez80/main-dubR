@@ -81,7 +81,7 @@ function renderCategoryChips() {
   }
 }
 
-// Render published recipes
+// Render approved recipes
 function renderRecipes(recipes, title = 'Recipes') {
   if (!ui.recipeResults || !ui.recipeList) return;
   

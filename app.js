@@ -82,7 +82,7 @@ function setupHomeViewListeners() {
         break;
       case 'all':
         renderRecipes(
-          recipes.filter(r => r.status === 'published'),
+          recipes.filter(r => r.status === 'approved'),
           'All Recipes'
         );
         break;
@@ -148,7 +148,7 @@ async function handleFormSubmit() {
       ethnicity,
       notes,
       images,
-      status: 'published'
+      status: 'approved'
     };
 
     // Save to database
@@ -166,7 +166,7 @@ async function handleFormSubmit() {
     ui.formTitle.textContent = 'Add New Recipe';
     hideAllPanels();
     renderRecipes(
-      recipes.filter(r => r.status === 'published'),
+      recipes.filter(r => r.status === 'approved'),
       editingId ? 'Recipe Updated' : 'Recipe Added'
     );
 
@@ -216,7 +216,7 @@ function setupRecipeListeners() {
 
       if (filterType && filterValue) {
         const filtered = recipes.filter(
-          r => r[filterType] === filterValue && r.status === 'published'
+          r => r[filterType] === filterValue && r.status === 'approved'
         );
         renderRecipes(filtered, `${filterValue} Recipes`);
       }
@@ -254,7 +254,7 @@ async function handleDeleteRecipe(recipeId) {
 
     // Refresh view
     renderRecipes(
-      recipes.filter(r => r.status === 'published'),
+      recipes.filter(r => r.status === 'approved'),
       'Recipe Deleted'
     );
 
@@ -341,7 +341,7 @@ async function handleApproveRecipe(recipeId, formData) {
     // Update local recipe list
     recipes = recipes.map(r =>
       r.id === recipeId
-        ? { ...r, ...updates, status: 'published', reviewedBy: editorName }
+        ? { ...r, ...updates, status: 'approved', reviewedBy: editorName }
         : r
     );
 
