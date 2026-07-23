@@ -125,7 +125,8 @@ index.html
 **Purpose:** OCR upload and review workflow  
 **Exports:**
 - `ocrState` - Workflow state
-- `performOCR(file)` - Extract text (placeholder)
+- `performOCR(files, onProgress)` - Extract text with client-side Tesseract.js
+- `parseRecipeText(text, confidence)` - Parse recognized text into recipe fields
 - `createDraftFromOCR(images, data, name)` - Create recipe
 - `submitOCRRecipe(recipe)` - Save to DB
 - `approveDraftRecipe(id, editor, updates)` - Publish
@@ -342,7 +343,7 @@ document.addEventListener('submit', (e) => {
 ## Future Enhancements
 
 ### Short Term
-- Integrate real OCR library (Tesseract.js)
+- Improve handwritten-recipe recognition and image preprocessing
 - Add recipe search functionality
 - Implement user authentication
 - Add recipe categories/tags

@@ -479,6 +479,7 @@ small {
 .review-content .field p {
   margin: 4px 0 0;
   color: var(--text);
+  white-space: pre-wrap;
 }
 
 .review-actions {

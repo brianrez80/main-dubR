@@ -14,8 +14,9 @@ const UNLOCK_KEY = 'cheryl-recipe-box-unlocked';
 
 // Main categories for recipes
 const MAIN_CATEGORIES = [
-  'Chicken', 'Beef', 'Pork', 'Fish', 
-  'Salad', 'Dessert', 'Sweets', 'Appetizers'
+  'Chicken', 'Beef', 'Pork', 'Fish', 'Seafood',
+  'Salad', 'Soup', 'Breakfast', 'Vegetarian',
+  'Dessert', 'Sweets', 'Appetizers', 'Side Dish', 'Other'
 ];
 
 // Ethnicity/Cuisine options

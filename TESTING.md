@@ -237,8 +237,8 @@ curl https://yourdomain.com/index.html | grep "DOCTYPE"
 ## Known Limitations & Future Work
 
 ### Current Limitations
-1. **OCR is placeholder** - Returns mock data, not real OCR
-   - Fix: Integrate Tesseract.js or server-side API
+1. **OCR is optimized for clear printed text** - Handwriting, shadows, and skewed pages may require manual correction
+   - The review queue preserves the original image and raw OCR output for verification
 2. **Single user workflow** - No multi-user authentication
    - Fix: Add user login, track reviewer
 3. **No recipe search** - Only browse by category

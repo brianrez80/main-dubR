@@ -235,21 +235,14 @@ Created comprehensive test suite (`test.js`):
 
 ## OCR Implementation Notes
 
-The current implementation includes a **placeholder OCR function** (`performOCR()`) that returns mock data. For production, integrate one of:
+The application uses **Tesseract.js 6.0.1** for real client-side OCR. Recipe images
+are read in the browser, parsed into recipe fields, and only uploaded to Supabase
+after text extraction succeeds. The parser extracts the title, ingredient and
+instruction sections, cook time, category, and cuisine while preserving the raw
+OCR text and confidence score for review.
 
-### Client-Side OCR:
-- **Tesseract.js** - JavaScript OCR library
-  ```javascript
-  const result = await Tesseract.recognize(imageFile);
-  ```
-
-### Server-Side OCR:
-- **Google Cloud Vision API**
-- **AWS Textract**
-- **Microsoft Computer Vision**
-- **Azure Form Recognizer**
-
-The data structure is ready to accept real OCR output.
+Clear, well-lit printed recipes work best. Handwriting, shadows, skewed pages, and
+decorative fonts may still need correction in the review queue.
 
 ## Testing Instructions
 
@@ -280,7 +273,7 @@ node test.js
 ## Deployment Notes
 
 ### Before Production:
-1. Integrate real OCR service (not placeholder)
+1. Test OCR with representative printed and handwritten recipe images
 2. Implement backend session management (if needed)
 3. Move PIN to environment variables
 4. Add user authentication (beyond PIN)

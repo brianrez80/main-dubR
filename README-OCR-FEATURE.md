@@ -16,8 +16,8 @@ All requirements met. Application is fully functional with comprehensive OCR rev
 
 - ✅ **OCR fills in recipe fields**
   - Extracts: title, ingredients, instructions, cook time, categories
-  - Placeholder OCR ready for integration with real service
-  - Confidence scoring structure
+  - Real client-side OCR powered by Tesseract.js 6.0.1
+  - Raw recognized text and confidence score preserved for review
 
 - ✅ **Original images attached to recipes**
   - Stored in Supabase Storage bucket
@@ -374,7 +374,7 @@ See TESTING.md for complete checklist
 - Ensure no console errors
 
 ### For Production
-1. Integrate real OCR (Tesseract.js or API)
+1. Test OCR with representative printed and handwritten recipe images
 2. Add user authentication
 3. Implement rate limiting
 4. Add error logging

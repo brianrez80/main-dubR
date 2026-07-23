@@ -62,20 +62,9 @@ jsFiles.forEach(file => {
   const filePath = path.join(__dirname, file);
   try {
     const content = fs.readFileSync(filePath, 'utf8');
-    // Basic syntax check - ensure no obvious issues
-    if (content.includes('function ') || content.includes('const ') || content.includes('class ')) {
-      // Check for common syntax issues
-      const hasUnclosedBrackets = (content.match(/{/g) || []).length !== (content.match(/}/g) || []).length;
-      const hasUnclosedParens = (content.match(/\(/g) || []).length !== (content.match(/\)/g) || []).length;
-      
-      if (hasUnclosedBrackets || hasUnclosedParens) {
-        fail(`${file} has bracket/paren mismatch`);
-      } else {
-        pass(`${file} syntax OK`);
-      }
-    } else {
-      fail(`${file} has no JavaScript content`);
-    }
+    // Compile the script without executing it.
+    new Function(content);
+    pass(`${file} syntax OK`);
   } catch (err) {
     fail(`${file} - ${err.message}`);
   }
@@ -113,7 +102,7 @@ try {
   console.log(`\n  Found ${scriptMatches.length} script includes:`);
   scriptMatches.forEach(match => {
     const src = match.match(/src="([^"]+)"/)[1];
-    if (src.includes('supabase')) {
+    if (/^https?:\/\//.test(src)) {
       pass(`  External library: ${src}`);
     } else if (src.endsWith('.js')) {
       const srcPath = path.join(__dirname, src);
@@ -203,6 +192,21 @@ try {
       fail(`Missing feature: ${feature.name}`);
     }
   });
+
+  if (ocrContent.includes('Tesseract.createWorker')) {
+    pass('Feature: Real Tesseract OCR integration');
+  } else {
+    fail('OCR module does not initialize a real OCR engine');
+  }
+
+  if (
+    ocrContent.includes("ingredients: 'Ingredients detected from image...'") ||
+    ocrContent.includes("instructions: 'Instructions extracted from image...'")
+  ) {
+    fail('OCR module still contains mock extraction results');
+  } else {
+    pass('Mock OCR extraction results removed');
+  }
 } catch (err) {
   fail(`Could not read OCR module: ${err.message}`);
 }
