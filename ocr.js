@@ -117,7 +117,16 @@ function findRecipeTitle(lines, text) {
     return !/^(?:test kitchen recipe|recipe card|family recipe|recipe)$/i.test(line);
   });
 
-  return cleanOCRLine(candidates[0] || 'Untitled Recipe');
+  const titleCandidate = candidates.find((line, index) => {
+    const hasCandidateAfterIt = index < candidates.length - 1;
+    const looksLikeRecipeKicker = (
+      /\brecipe\b/i.test(line) &&
+      /\b(?:test|verification|kitchen|family|cookbook|collection|card)\b/i.test(line)
+    );
+    return !(hasCandidateAfterIt && looksLikeRecipeKicker);
+  });
+
+  return cleanOCRLine(titleCandidate || candidates[0] || 'Untitled Recipe');
 }
 
 function normalizeMainCategory(explicitValue, text) {
