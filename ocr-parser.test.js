@@ -95,6 +95,34 @@ assert.match(merged.ingredients, /4 cups tomatoes/);
 assert.match(merged.instructions, /^2\. Cook for 20 minutes\./m);
 assert.strictEqual(merged.confidence, 90);
 
+const noisySocialPost = parseRecipeText(`
+Garlic Butter Salmon and Shrimp
+Ingredients
+4 salmon fillets
+1 pound large shrimp
+2 tablespoons olive oil
+%%%
+3 cloves garlic, minced
+1 cup heavy cream
+Full recipe in the comments
+@weeknightrecipes
+XZQPVTR SKRRTT
+
+Directions
+1. Heat the olive oil in a skillet.
+2. Add the salmon and shrimp.
+<<< /// ===
+3. Stir in the garlic and cream.
+Full recipe in the comments
+BLKQRTZZ
+`);
+
+assert.match(noisySocialPost.ingredients, /4 salmon fillets/);
+assert.match(noisySocialPost.ingredients, /1 cup heavy cream/);
+assert.doesNotMatch(noisySocialPost.ingredients, /full recipe|weeknightrecipes|XZQPVTR/i);
+assert.match(noisySocialPost.instructions, /^3\. Stir in the garlic and cream\./m);
+assert.doesNotMatch(noisySocialPost.instructions, /full recipe|BLKQRTZZ|<<<|===/i);
+
 assert.throws(
   () => parseRecipeText(''),
   /No readable text/

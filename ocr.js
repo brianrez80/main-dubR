@@ -25,6 +25,15 @@ const OCR_METADATA_LABELS = [
   'yield'
 ];
 
+const OCR_SOCIAL_PROMPT_PATTERNS = [
+  /\b(?:full|complete)\s+recipe\s+(?:is\s+)?(?:in|on)\s+(?:the\s+)?comments?\b/i,
+  /\brecipe\s+(?:is\s+)?(?:in|on)\s+(?:the\s+)?comments?\b/i,
+  /\b(?:see|check)\s+(?:the\s+)?comments?\s+for\s+(?:the\s+)?(?:full\s+)?recipe\b/i,
+  /\bcomment\s+['"]?(?:recipe|yes)['"]?\s+(?:below\s+)?(?:for|to get)\b/i,
+  /\blink\s+in\s+(?:my\s+|the\s+)?bio\b/i,
+  /\b(?:follow|like|share|save)\b.{0,40}\b(?:more|recipe|recipes)\b/i
+];
+
 function normalizeOCRText(text) {
   return String(text || '')
     .replace(/\r\n?/g, '\n')
@@ -39,6 +48,27 @@ function cleanOCRLine(line) {
     .replace(/^[•·▪◦*-]\s*/, '')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+function isSocialPromptLine(line) {
+  const cleaned = cleanOCRLine(line);
+  return OCR_SOCIAL_PROMPT_PATTERNS.some(pattern => pattern.test(cleaned));
+}
+
+function isLikelyOCRNoise(line) {
+  const cleaned = cleanOCRLine(line);
+  if (!cleaned || isSocialPromptLine(cleaned)) return true;
+
+  const compact = cleaned.replace(/\s/g, '');
+  const readableCharacters = compact.match(/[\p{L}\p{N}]/gu) || [];
+
+  if (readableCharacters.length < 2) return true;
+  if (compact.length >= 6 && readableCharacters.length / compact.length < 0.35) return true;
+
+  const letterRuns = cleaned.toLowerCase().match(/[a-z]{7,}/g) || [];
+  if (letterRuns.some(run => !/[aeiouy]/.test(run))) return true;
+
+  return false;
 }
 
 function extractLabeledValue(text, labels) {
@@ -67,7 +97,15 @@ function findSectionIndex(lines, section) {
 function getSectionLines(lines, startIndex, endIndex) {
   if (startIndex < 0) return [];
   const end = endIndex > startIndex ? endIndex : lines.length;
-  return lines.slice(startIndex + 1, end).map(cleanOCRLine).filter(Boolean);
+  const sectionLines = [];
+
+  for (const line of lines.slice(startIndex + 1, end)) {
+    const cleaned = cleanOCRLine(line);
+    if (isSocialPromptLine(cleaned)) break;
+    if (!isLikelyOCRNoise(cleaned)) sectionLines.push(cleaned);
+  }
+
+  return sectionLines;
 }
 
 function formatInstructionLines(lines) {
