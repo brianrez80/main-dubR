@@ -108,7 +108,8 @@ function findRecipeTitle(lines, text) {
     .sort((a, b) => a - b)[0] ?? lines.length;
 
   const candidates = lines.slice(0, firstSectionIndex).filter(line => {
-    if (!line || OCR_METADATA_LABELS.some(label =>
+    const readableCharacterCount = (line.match(/[a-z0-9]/gi) || []).length;
+    if (!line || readableCharacterCount < 2 || OCR_METADATA_LABELS.some(label =>
       new RegExp(`^${label.replace(/\s+/g, '\\s+')}\\s*[:\\-]`, 'i').test(line)
     )) {
       return false;

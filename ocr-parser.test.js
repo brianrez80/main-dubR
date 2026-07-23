@@ -26,6 +26,7 @@ const { parseRecipeText, mergeParsedRecipePages, createDraftFromOCR } = context.
 
 const pancakeText = `
 LIVE OCR VERIFICATION RECIPE
+°
 Sunrise Lemon Pancakes
 Category: Breakfast | Cuisine: American
 Prep Time: 10 minutes | Cook Time: 15 minutes | Servings: 4
