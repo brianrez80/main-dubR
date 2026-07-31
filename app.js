@@ -25,6 +25,9 @@ async function initializeApp() {
   // Setup scroll to top
   setupScrollToTop();
 
+  // Initialize the Phase 2 Nexus workspace interactions
+  initializeNexus();
+
   // Render initial UI
   renderCategoryChips();
   renderOCRUploadForm();
@@ -92,6 +95,9 @@ function setupHomeViewListeners() {
         break;
       case 'review-queue':
         await loadAndShowReviewQueue();
+        break;
+      case 'nexus':
+        showPanel(ui.nexusPanel);
         break;
     }
   });

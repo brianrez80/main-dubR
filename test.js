@@ -38,6 +38,7 @@ const requiredFiles = [
   'ui.js',
   'auth.js',
   'ocr.js',
+  'nexus.js',
   'app.js',
   'butterfly.svg'
 ];
@@ -56,7 +57,7 @@ requiredFiles.forEach(file => {
 console.log('\n📝 JavaScript Syntax Check');
 console.log('-' .repeat(50));
 
-const jsFiles = ['config.js', 'db.js', 'images.js', 'ui.js', 'auth.js', 'ocr.js', 'app.js'];
+const jsFiles = ['config.js', 'db.js', 'images.js', 'ui.js', 'auth.js', 'ocr.js', 'nexus.js', 'app.js'];
 
 jsFiles.forEach(file => {
   const filePath = path.join(__dirname, file);
