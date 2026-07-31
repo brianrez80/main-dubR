@@ -10,6 +10,7 @@ const ui = {
   ocrUploadPanel: null,
   reviewQueuePanel: null,
   reviewComparisonPanel: null,
+  nexusPanel: null,
   mainChips: null,
   ethnicityChips: null,
   recipeList: null,
@@ -34,6 +35,7 @@ function initializeUI() {
   ui.ocrUploadPanel = document.getElementById('ocrUploadPanel');
   ui.reviewQueuePanel = document.getElementById('reviewQueuePanel');
   ui.reviewComparisonPanel = document.getElementById('reviewComparisonPanel');
+  ui.nexusPanel = document.getElementById('nexusPanel');
   ui.mainChips = document.getElementById('mainChips');
   ui.ethnicityChips = document.getElementById('ethnicityChips');
   ui.recipeList = document.getElementById('recipeList');
