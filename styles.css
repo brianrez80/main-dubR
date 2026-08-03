@@ -71,6 +71,9 @@ body:has(.nexus-panel:not(.hidden)) > main > #homeView { display:none; }
 .source-item strong,.progress-file strong { display:block; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.source-item small,.progress-file small { font-size:8px;margin:3px 0 0;color:#9a96a0; }
 .source-status { width:17px;height:17px;display:grid;place-items:center;border-radius:50%;font-size:8px;color:#4f8b64;background:#e5f2e9; }
 .source-status i { width:6px;height:6px;border:1px solid #8b70aa;border-top-color:transparent;border-radius:50%;animation:nexusSpin 1s linear infinite; }
+.source-item-actions { display:flex; align-items:center; gap:6px; }
+.nexus-inline-action { border:0; border-radius:999px; background:#efe7f8; color:#664d7d; padding:4px 8px; font-size:8px; cursor:pointer; }
+.nexus-inline-action.secondary { background:#f5ebeb; color:#8b4c4c; }
 .source-empty-note { margin-top:auto;border-top:1px solid #ece8e3;padding:16px 5px 0;display:flex;gap:9px;align-items:flex-start;color:#97919c;font-size:9px;line-height:1.45}.source-empty-note span{display:grid;place-items:center;flex:none;width:18px;height:18px;border:1px dashed #b9adbf;border-radius:50%;color:#897399}.source-empty-note p{margin:1px 0}
 .nexus-main-column { display:grid; gap:12px; }
 .nexus-dropzone { min-height:390px; border:1.5px dashed #bfb1cc; border-radius:22px; display:flex; flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:34px;background:radial-gradient(circle at 50% 42%,rgba(238,232,247,.9),rgba(255,255,255,.72) 48%);position:relative;outline:none;transition:.3s; }
