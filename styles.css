@@ -71,6 +71,7 @@ body:has(.nexus-panel:not(.hidden)) > main > #homeView { display:none; }
 .source-item strong,.progress-file strong { display:block; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.source-item small,.progress-file small { font-size:8px;margin:3px 0 0;color:#9a96a0; }
 .source-status { width:17px;height:17px;display:grid;place-items:center;border-radius:50%;font-size:8px;color:#4f8b64;background:#e5f2e9; }
 .source-status i { width:6px;height:6px;border:1px solid #8b70aa;border-top-color:transparent;border-radius:50%;animation:nexusSpin 1s linear infinite; }
+.source-item.is-warning { background:#fff7e8; }.source-item.is-warning .source-status { color:#8a641f;background:#fff0cf; }
 .source-item-actions { display:flex; align-items:center; gap:6px; }
 .nexus-inline-action { border:0; border-radius:999px; background:#efe7f8; color:#664d7d; padding:4px 8px; font-size:8px; cursor:pointer; }
 .nexus-inline-action.secondary { background:#f5ebeb; color:#8b4c4c; }
