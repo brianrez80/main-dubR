@@ -36,7 +36,8 @@ const OCR_SOCIAL_PROMPT_PATTERNS = [
   /\b(?:follow|like|share|save)\b.{0,40}\b(?:more|recipe|recipes)\b/i,
   /^\s*(?:write|add|leave)\s+(?:a\s+)?comment\b/i,
   /^\s*(?:(?:like|share|follow|save|reply|comment)(?:\s*(?:[·•|/]|and)\s*|\s+)?){1,6}$/i,
-  /^\s*(?:view|read)\s+(?:all\s+)?comments?\b/i
+  /^\s*(?:view|read)\s+(?:all\s+)?comments?\b/i,
+  /^@[a-z0-9_.]{2,}$/i
 ];
 
 function normalizeOCRText(text) {
