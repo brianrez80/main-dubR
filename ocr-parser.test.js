@@ -217,6 +217,41 @@ assert.doesNotMatch(
   /Write a comment|^(?:Like|Share|Follow)$|Cooking Time/im
 );
 
+const fourImageRecipe = mergeParsedRecipePages([
+  parseRecipeText(`
+Slow Cooker Tuscan Chicken
+Preparation Time: 15 minutes | Cooking Time: 7 hours
+Ingredients:
+2 pounds chicken thighs
+1 teaspoon dried oregano
+`, 92),
+  parseRecipeText(`
+1 cup heavy cream
+Salt and pepper to taste
+Write a comment…
+`, 90),
+  parseRecipeText(`
+DIRECTIONS —
+1. Season the chicken with oregano.
+2. Cook on low for 7 hours.
+`, 89),
+  parseRecipeText(`
+3. Stir in the heavy cream.
+4. Serve warm.
+Like
+Share
+`, 88)
+]);
+
+assert.strictEqual(fourImageRecipe.title, 'Slow Cooker Tuscan Chicken');
+assert.strictEqual(fourImageRecipe.cookTime, '7 hours');
+assert.match(fourImageRecipe.ingredients, /2 pounds chicken thighs/);
+assert.match(fourImageRecipe.ingredients, /1 cup heavy cream/);
+assert.doesNotMatch(fourImageRecipe.ingredients, /DIRECTIONS|Season the chicken|Write a comment/i);
+assert.match(fourImageRecipe.instructions, /^1\. Season the chicken with oregano\./m);
+assert.match(fourImageRecipe.instructions, /^4\. Serve warm\./m);
+assert.doesNotMatch(fourImageRecipe.instructions, /Write a comment|^Like$|^Share$/im);
+
 createDraftFromOCR(['image.jpg'], pancakes, 'Test Cook').then(draft => {
   assert.strictEqual(draft.name, 'Sunrise Lemon Pancakes');
   assert.strictEqual(draft.mainCategory, 'Breakfast');
@@ -235,6 +270,18 @@ createDraftFromOCR(['image.jpg'], pancakes, 'Test Cook').then(draft => {
   assert.match(reviewDraft.notes, /^Ingredients\n/);
   assert.match(reviewDraft.notes, /4\. Serve warm\./);
   assert.doesNotMatch(reviewDraft.notes, /Write a comment|^(?:Like|Share|Follow)$|Cooking Time/im);
+  return createDraftFromOCR(
+    ['https://example.test/four-page-recipe.jpg'],
+    fourImageRecipe,
+    'Test Cook'
+  );
+}).then(fourImageDraft => {
+  assert.strictEqual(fourImageDraft.time, '7 hours');
+  assert.deepStrictEqual(fourImageDraft.images, ['https://example.test/four-page-recipe.jpg']);
+  assert.match(fourImageDraft.notes, /^Ingredients\n/);
+  assert.match(fourImageDraft.notes, /\n\nInstructions\n/);
+  assert.match(fourImageDraft.notes, /^4\. Serve warm\./m);
+  assert.doesNotMatch(fourImageDraft.notes, /DIRECTIONS|Write a comment|^Like$|^Share$/im);
   console.log('OCR parser tests passed.');
 }).catch(error => {
   console.error(error);
