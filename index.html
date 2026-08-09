@@ -203,9 +203,9 @@
         </div>
         <div class="nexus-readiness" aria-label="Recipe setup">
           <span>Recipe setup</span>
-          <strong>Just getting started</strong>
-          <div><i></i></div>
-          <small>2 of 8 recipe sources added</small>
+          <strong data-nexus-readiness>0 recipe sources added</strong>
+          <div><i data-nexus-readiness-bar style="width: 0%"></i></div>
+          <small data-nexus-readiness-detail>Waiting for your first recipe image</small>
         </div>
       </div>
 
@@ -213,20 +213,9 @@
         <aside class="nexus-sources" aria-labelledby="sourcesTitle">
           <div class="nexus-section-title">
             <div><span class="nexus-label">Recipe library</span><h3 id="sourcesTitle">Your recipe sources</h3></div>
-            <span class="source-count" data-source-count>2</span>
+            <span class="source-count" data-source-count>0</span>
           </div>
-          <div class="source-list" data-source-list>
-            <article class="source-item is-ready">
-              <span class="source-icon source-icon-pdf">PDF</span>
-              <div><strong>Cheryl's Recipe Cards</strong><small>PDF · 4.8 MB</small></div>
-              <span class="source-status" title="Ready">&#10003;</span>
-            </article>
-            <article class="source-item is-learning">
-              <span class="source-icon source-icon-csv">CSV</span>
-              <div><strong>Cheryl's Family Favorites</strong><small>CSV · 1.2 MB</small></div>
-              <span class="source-status" title="Preparing"><i></i></span>
-            </article>
-          </div>
+          <div class="source-list" data-source-list></div>
           <div class="source-empty-note" data-source-empty>
             <span aria-hidden="true">+</span>
             <p>No recipe sources yet. Add your first recipe image to begin.</p>
@@ -258,15 +247,15 @@
           <section class="nexus-card import-progress" aria-labelledby="progressTitle">
             <div class="nexus-section-title">
               <div><span class="nexus-label">Recipe import</span><h3 id="progressTitle">Import progress</h3></div>
-              <span class="progress-percent" data-progress-percent>68%</span>
+              <span class="progress-percent" data-progress-percent>0%</span>
             </div>
-            <div class="progress-track"><i data-nexus-progress></i></div>
+            <div class="progress-track"><i data-nexus-progress style="width: 0%"></i></div>
             <div class="progress-file" data-progress-file>
               <span class="file-pulse"><i></i></span>
               <div><strong data-progress-name>No files queued</strong><small data-progress-status>Waiting for recipe images...</small></div>
             </div>
             <ul class="progress-steps" data-progress-steps>
-              <li class="active"><span></span>File received</li>
+              <li><span></span>File received</li>
               <li><span></span>Reading recipe</li>
               <li><span></span>Organizing recipe details</li>
               <li><span></span>Ready to review</li>

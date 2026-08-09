@@ -71,6 +71,7 @@ body:has(.nexus-panel:not(.hidden)) > main > #homeView { display:none; }
 .source-item strong,.progress-file strong { display:block; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }.source-item small,.progress-file small { font-size:8px;margin:3px 0 0;color:#9a96a0; }
 .source-status { width:17px;height:17px;display:grid;place-items:center;border-radius:50%;font-size:8px;color:#4f8b64;background:#e5f2e9; }
 .source-status i { width:6px;height:6px;border:1px solid #8b70aa;border-top-color:transparent;border-radius:50%;animation:nexusSpin 1s linear infinite; }
+.source-item.is-warning { background:#fff7e8; }.source-item.is-warning .source-status { color:#8a641f;background:#fff0cf; }
 .source-item-actions { display:flex; align-items:center; gap:6px; }
 .nexus-inline-action { border:0; border-radius:999px; background:#efe7f8; color:#664d7d; padding:4px 8px; font-size:8px; cursor:pointer; }
 .nexus-inline-action.secondary { background:#f5ebeb; color:#8b4c4c; }
@@ -297,6 +298,38 @@ h4 {
   border-radius: 12px;
   margin: 12px 0;
   background: #f7f0fb;
+}
+
+.recipe-image-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.recipe-image-gallery--1 {
+  display: block;
+}
+
+.recipe-image-gallery .recipe-image-link {
+  display: block;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f7f0fb;
+}
+
+.recipe-image-gallery img {
+  display: block;
+  width: 100%;
+  height: 150px;
+  max-height: none;
+  margin: 0;
+  object-fit: contain;
+}
+
+.recipe-image-gallery--1 img {
+  height: auto;
+  max-height: 260px;
 }
 
 .meta {
@@ -598,10 +631,17 @@ small {
   gap: 12px;
 }
 
-.image-grid img {
+.comparison-images .image-grid {
+  display: grid;
+  place-items: center;
+}
+
+.comparison-images .image-grid img {
   width: 100%;
-  height: 200px;
-  object-fit: cover;
+  max-width: 100%;
+  height: auto;
+  max-height: min(70vh, 640px);
+  object-fit: contain;
   border-radius: 8px;
   background: #f8f2fb;
 }
@@ -620,6 +660,26 @@ small {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+#review-notes {
+  min-height: 320px;
+  max-height: 60vh;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+.review-publish-status {
+  margin: 12px 0 0;
+  font-weight: 600;
+}
+
+.review-publish-status.is-publishing {
+  color: var(--muted);
+}
+
+.review-publish-status.is-error {
+  color: #a52626;
 }
 
 /* OCR Upload */
@@ -731,5 +791,11 @@ small {
 
   h3 {
     font-size: 20px;
+  }
+}
+
+@media (max-width: 400px) {
+  .recipe-image-gallery:not(.recipe-image-gallery--1) {
+    grid-template-columns: 1fr;
   }
 }

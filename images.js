@@ -72,14 +72,22 @@ async function uploadSelectedImages(recipeId, files) {
 }
 
 // Render image HTML
-function renderImageHtml(images, recipeName) {
+function renderImageHtml(images, recipeName, galleryClass = '') {
   if (!images || images.length === 0) return '';
-  return images.map((imageUrl, index) => {
-    return `<img 
-      src="${imageUrl}" 
+  const imageHtml = images.map((imageUrl, index) => {
+    const image = `<img
+      src="${imageUrl}"
       alt="${recipeName}${images.length > 1 ? ` image ${index + 1}` : ''}"
       loading="lazy"
       onerror="this.style.display='none'"
     >`;
+
+    if (!galleryClass) return image;
+
+    return `<a class="recipe-image-link" href="${imageUrl}" target="_blank" rel="noopener noreferrer" aria-label="View full-size ${recipeName}${images.length > 1 ? ` image ${index + 1}` : ''}">${image}</a>`;
   }).join('');
+
+  if (!galleryClass) return imageHtml;
+
+  return `<div class="${galleryClass} ${galleryClass}--${images.length}">${imageHtml}</div>`;
 }

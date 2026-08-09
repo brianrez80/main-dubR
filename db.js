@@ -55,6 +55,36 @@ function mapRecipeToDb(recipe) {
   };
 }
 
+// Map only the fields that are present. Updates must not turn absent draft
+// metadata (images, OCR text, contributor credit) into null or empty values.
+function mapRecipeUpdatesToDb(updates) {
+  const dbUpdates = {};
+  const fieldMap = {
+    name: 'name',
+    time: 'cook_time',
+    mainCategory: 'main_category',
+    ethnicity: 'ethnicity',
+    notes: 'notes',
+    status: 'status',
+    ocrText: 'ocr_text',
+    contributorName: 'contributor_name',
+    reviewedBy: 'reviewed_by',
+    reviewedAt: 'reviewed_at'
+  };
+
+  Object.entries(fieldMap).forEach(([uiField, dbField]) => {
+    if (Object.prototype.hasOwnProperty.call(updates, uiField)) {
+      dbUpdates[dbField] = updates[uiField];
+    }
+  });
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'images')) {
+    dbUpdates.image_url = JSON.stringify(Array.isArray(updates.images) ? updates.images : []);
+  }
+
+  return dbUpdates;
+}
+
 // Fetch all recipes
 async function fetchAllRecipes() {
   const db = getSupabase();
@@ -121,13 +151,21 @@ async function updateRecipe(recipeId, updates) {
   const db = getSupabase();
   if (!db) throw new Error('Supabase not initialized');
 
-  const dbUpdates = mapRecipeToDb({ ...updates, id: recipeId });
+  const dbUpdates = mapRecipeUpdatesToDb(updates);
+  if (Object.keys(dbUpdates).length === 0) {
+    throw new Error('No recipe changes were provided');
+  }
   
   try {
     const { error } = await db.from(SUPABASE_CONFIG.TABLE_NAME)
       .update(dbUpdates)
       .eq('id', recipeId);
-    if (error) throw new Error(error.message || 'Recipe update failed');
+    if (error) {
+      const details = [error.message, error.details, error.hint, error.code]
+        .filter(Boolean)
+        .join(' — ');
+      throw new Error(details || 'Recipe update failed');
+    }
   } catch (err) {
     console.error('Error updating recipe:', err);
     throw err;

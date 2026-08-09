@@ -97,7 +97,7 @@ function renderRecipes(recipes, title = 'Recipes') {
 
   ui.recipeList.innerHTML = recipes.map(recipe => {
     const images = getRecipeImages(recipe);
-    const imageHtml = renderImageHtml(images, recipe.name);
+    const imageHtml = renderImageHtml(images, recipe.name, 'recipe-image-gallery');
     const meta = [
       recipe.mainCategory,
       recipe.ethnicity,
@@ -228,9 +228,10 @@ function showReviewComparison(recipe) {
 
       <div class="form-actions">
         <button type="button" class="btn secondary" data-cancel-review>Cancel</button>
-        <button type="submit" class="btn danger" data-delete-review>Delete</button>
+        <button type="button" class="btn danger" data-delete-review>Delete</button>
         <button type="submit" class="btn approve" data-approve-review>Approve & Publish</button>
       </div>
+      <p class="review-publish-status hidden" data-review-publish-status role="status" aria-live="polite"></p>
     </form>
   `;
 

@@ -296,26 +296,87 @@ async function setupReviewListeners() {
         }
       }
     }
+
+    const cancelReviewButton = e.target.closest?.('[data-cancel-review]');
+    if (cancelReviewButton) {
+      hideAllPanels();
+      showPanel(ui.reviewQueuePanel);
+      return;
+    }
+
+    const deleteReviewButton = e.target.closest?.('[data-delete-review]');
+    if (deleteReviewButton) {
+      const form = deleteReviewButton.closest('.comparison-form');
+      const recipeId = form?.dataset.recipeId;
+      if (!recipeId || !confirm('Delete this draft recipe?')) return;
+
+      try {
+        await deleteRecipe(recipeId);
+        recipes = recipes.filter(r => r.id !== recipeId);
+        hideAllPanels();
+        await loadAndShowReviewQueue();
+      } catch (error) {
+        console.error('Error deleting draft recipe:', error);
+        setReviewPublishStatus(form, `Unable to delete this draft: ${getUsefulErrorMessage(error)}`, 'error');
+      }
+    }
   });
 
-  // Handle review comparison form submission
+  // The only submit control in the comparison form is Approve & Publish.
+  // This stays reliable for dynamically rendered forms and keyboard submits.
   document.addEventListener('submit', async (e) => {
     if (!e.target.matches('.comparison-form')) return;
 
     e.preventDefault();
-    
-    const recipeId = e.target.dataset.recipeId;
-    const formData = new FormData(e.target);
-
-    const recipe = recipes.find(r => r.id === recipeId);
-    if (!recipe) return;
-
-    // Check which button was clicked
-    const submitButton = e.submitter;
-    if (submitButton?.dataset.approveReview) {
-      await handleApproveRecipe(recipeId, formData);
-    }
+    await submitReviewApproval(e.target);
   });
+}
+
+async function submitReviewApproval(form) {
+  const recipeId = form.dataset.recipeId;
+  const recipe = recipes.find(r => r.id === recipeId);
+  if (!recipe) {
+    setReviewPublishStatus(form, 'This draft is no longer available. Refresh the review queue and try again.', 'error');
+    return;
+  }
+
+  if (form.dataset.publishing === 'true') return;
+
+  const approveButton = form.querySelector('[data-approve-review]');
+  form.dataset.publishing = 'true';
+  if (approveButton) {
+    approveButton.disabled = true;
+    approveButton.dataset.label = approveButton.textContent;
+    approveButton.textContent = 'Publishing...';
+  }
+  setReviewPublishStatus(form, 'Publishing your approved recipe...', 'publishing');
+
+  try {
+    await handleApproveRecipe(recipeId, new FormData(form));
+    hideAllPanels();
+    renderRecipes(recipes.filter(r => r.status === 'approved'), 'All Recipes');
+  } catch (error) {
+    const message = getUsefulErrorMessage(error);
+    console.error('Failed to publish draft recipe:', error);
+    setReviewPublishStatus(form, `Unable to publish this recipe: ${message}`, 'error');
+  } finally {
+    form.dataset.publishing = 'false';
+    if (approveButton) {
+      approveButton.disabled = false;
+      approveButton.textContent = approveButton.dataset.label || 'Approve & Publish';
+    }
+  }
+}
+
+function setReviewPublishStatus(form, message, state) {
+  const status = form?.querySelector('[data-review-publish-status]');
+  if (!status) return;
+  status.textContent = message;
+  status.className = `review-publish-status${state ? ` is-${state}` : ''}`;
+}
+
+function getUsefulErrorMessage(error) {
+  return error?.message || 'The database update could not be completed. Please try again.';
 }
 
 // Load and display review queue
@@ -331,36 +392,26 @@ async function loadAndShowReviewQueue() {
 
 // Approve and publish recipe
 async function handleApproveRecipe(recipeId, formData) {
-  try {
-    const editorName = 'Cheryl'; // In production, get from authenticated user
-    
-    const updates = {
-      name: formData.get('name'),
-      time: formData.get('time'),
-      mainCategory: formData.get('mainCategory'),
-      ethnicity: formData.get('ethnicity'),
-      notes: formData.get('notes')
-    };
+  const editorName = 'Cheryl'; // In production, get from authenticated user
+  const existingRecipe = recipes.find(recipe => recipe.id === recipeId);
+  if (!existingRecipe) throw new Error('This draft is no longer available');
 
-    await approveDraftRecipe(recipeId, editorName, updates);
-    
-    // Update local recipe list
-    recipes = recipes.map(r =>
-      r.id === recipeId
-        ? { ...r, ...updates, status: 'approved', reviewedBy: editorName }
-        : r
-    );
+  const updates = {
+    name: formData.get('name'),
+    time: formData.get('time'),
+    mainCategory: formData.get('mainCategory'),
+    ethnicity: formData.get('ethnicity'),
+    notes: formData.get('notes')
+  };
 
-    alert('Recipe approved and published!');
-    hideAllPanels();
-    showPanel(ui.homeView);
-    
-    await loadAndShowReviewQueue();
+  const approvalUpdate = await approveDraftRecipe(recipeId, editorName, updates);
+  const approvedRecipe = { ...existingRecipe, ...updates, ...approvalUpdate };
 
-  } catch (error) {
-    console.error('Error approving recipe:', error);
-    alert(`Error: ${error.message}`);
-  }
+  // Merge rather than replace so imported images, OCR metadata, and contributor
+  // data remain available in the approved recipe flow.
+  recipes = recipes.map(recipe => recipe.id === recipeId ? approvedRecipe : recipe);
+  console.log('Recipe approved and published:', recipeId);
+  return approvedRecipe;
 }
 
 // Initialize app when DOM is ready
