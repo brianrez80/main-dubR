@@ -99,7 +99,7 @@ function isPlausibleRecipeTitle(line) {
   if (digits.length > letters.length / 2) return false;
   if (letters.length / Math.max(1, compact.length) < 0.45) return false;
 
-  return !/^(?:ingredients?|directions?|instructions?|method|preparation)$/i.test(cleaned);
+  return !getOCRSection(cleaned);
 }
 
 function extractLabeledValue(text, labels) {
@@ -151,8 +151,28 @@ function isOCRMetadataLine(line) {
   return /^(?:prep(?:aration)? time|cook(?:ing)? time|total time|servings?|serving size|yield|main category|category|cuisine|ethnicity)(?:\s*[:\-]|\s+)/i.test(cleaned);
 }
 
+function getOCRSection(line) {
+  const compact = cleanOCRLine(line)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+
+  if (/^(?:ingredients?|ingredientlist|whatyoullneed)$/.test(compact)) {
+    return 'ingredients';
+  }
+
+  if (/^(?:(?:directions?|[il1]nstructions?|method|preparation|steps?|howtomakeit)|(?:directions?|[il1]nstructions?)(?:and|or)?(?:directions?|[il1]nstructions?))$/.test(compact)) {
+    return 'instructions';
+  }
+
+  return '';
+}
+
 function findSectionIndex(lines, section) {
-  return lines.findIndex(line => OCR_SECTION_HEADINGS[section].test(line));
+  return lines.findIndex(line => getOCRSection(line) === section);
+}
+
+function looksLikeInstructionLine(line) {
+  return /^(?:\d{1,2}[.)]\s*)?(?:add|bake|beat|blend|boil|bring|broil|chill|combine|cook|cover|drain|fold|garnish|heat|let|marinate|mix|place|pour|preheat|reduce|remove|return|roast|saute|season|serve|set|simmer|slice|stir|transfer|whisk)\b/i.test(cleanOCRLine(line));
 }
 
 function getSectionLines(lines, startIndex, endIndex) {
@@ -330,8 +350,7 @@ function parseRecipeText(rawText, confidence = 0) {
 
   if (ingredientLines.length === 0) ingredientLines = lines.filter(looksLikeIngredientLine);
   if (instructionLines.length === 0) {
-    const instructionPattern = /^(?:\d{1,2}[.)]\s*)?(?:add|bake|beat|blend|boil|combine|cook|fold|heat|mix|place|pour|preheat|serve|stir|whisk)\b/i;
-    instructionLines = lines.filter(line => instructionPattern.test(line));
+    instructionLines = lines.filter(looksLikeInstructionLine);
   }
 
   const metadata = getRecipeMetadata(text);
@@ -370,17 +389,16 @@ function mergeParsedRecipePages(pages) {
 
     lines.forEach((line, index) => {
       if (Number.isInteger(firstSectionIndex) && index < firstSectionIndex) return;
-      if (OCR_SECTION_HEADINGS.ingredients.test(line)) {
-        activeSection = 'ingredients';
-        foundSectionContent = true;
-        return;
-      }
-      if (OCR_SECTION_HEADINGS.instructions.test(line)) {
-        activeSection = 'instructions';
+      const section = getOCRSection(line);
+      if (section) {
+        activeSection = section;
         foundSectionContent = true;
         return;
       }
       if (!activeSection || isOCRMetadataLine(line) || isLikelyOCRNoise(line)) return;
+      if (activeSection === 'ingredients' && looksLikeInstructionLine(line)) {
+        activeSection = 'instructions';
+      }
 
       if (activeSection === 'ingredients') {
         if (!uniqueIngredients.some(ingredient => ingredient.toLowerCase() === line.toLowerCase())) {
