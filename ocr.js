@@ -35,7 +35,7 @@ const OCR_SOCIAL_PROMPT_PATTERNS = [
   /\blink\s+in\s+(?:my\s+|the\s+)?bio\b/i,
   /\b(?:follow|like|share|save)\b.{0,40}\b(?:more|recipe|recipes)\b/i,
   /^\s*(?:write|add|leave)\s+(?:a\s+)?comment\b/i,
-  /^\s*(?:like|share|follow|save)\s*(?:this|for|the)?\s*(?:post|recipe|video)?\s*$/i,
+  /^\s*(?:(?:like|share|follow|save|reply|comment)(?:\s*(?:[·•|/]|and)\s*|\s+)?){1,6}$/i,
   /^\s*(?:view|read)\s+(?:all\s+)?comments?\b/i
 ];
 
