@@ -61,14 +61,39 @@ function isLikelyOCRNoise(line) {
 
   const compact = cleaned.replace(/\s/g, '');
   const readableCharacters = compact.match(/[\p{L}\p{N}]/gu) || [];
+  const letters = compact.match(/\p{L}/gu) || [];
+  const digits = compact.match(/\p{N}/gu) || [];
 
   if (readableCharacters.length < 2) return true;
   if (compact.length >= 6 && readableCharacters.length / compact.length < 0.35) return true;
+  if (readableCharacters.length >= 5 && letters.length < 2) return true;
+  if (digits.length >= letters.length && letters.length < 6) return true;
 
   const letterRuns = cleaned.toLowerCase().match(/[a-z]{7,}/g) || [];
   if (letterRuns.some(run => !/[aeiouy]/.test(run))) return true;
 
   return false;
+}
+
+function looksLikeIngredientLine(line) {
+  return /^(?:\d+(?:[ /.]\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞])\s*(?:cups?|tablespoons?|tbsp|teaspoons?|tsp|ounces?|oz|pounds?|lb|grams?|g|kilograms?|kg|cloves?|cans?|packages?|large|medium|small)\b/i.test(cleanOCRLine(line));
+}
+
+function isPlausibleRecipeTitle(line) {
+  const cleaned = cleanOCRLine(line);
+  if (isLikelyOCRNoise(cleaned) || looksLikeIngredientLine(cleaned)) return false;
+  if (cleaned.length < 3 || cleaned.length > 90) return false;
+
+  const letters = cleaned.match(/[a-z]/gi) || [];
+  const digits = cleaned.match(/\d/g) || [];
+  const words = cleaned.match(/[a-z][a-z'-]*/gi) || [];
+  const compact = cleaned.replace(/\s/g, '');
+
+  if (letters.length < 3 || words.length === 0 || words.length > 12) return false;
+  if (digits.length > letters.length / 2) return false;
+  if (letters.length / Math.max(1, compact.length) < 0.45) return false;
+
+  return !/^(?:ingredients?|directions?|instructions?|method|preparation)$/i.test(cleaned);
 }
 
 function extractLabeledValue(text, labels) {
@@ -139,20 +164,20 @@ function formatInstructionLines(lines) {
 
 function findRecipeTitle(lines, text) {
   const explicitTitle = extractLabeledValue(text, ['recipe title', 'title']);
-  if (explicitTitle) return explicitTitle;
+  if (explicitTitle && isPlausibleRecipeTitle(explicitTitle)) return explicitTitle;
 
   const firstSectionIndex = [findSectionIndex(lines, 'ingredients'), findSectionIndex(lines, 'instructions')]
     .filter(index => index >= 0)
     .sort((a, b) => a - b)[0] ?? lines.length;
 
   const candidates = lines.slice(0, firstSectionIndex).filter(line => {
-    const readableCharacterCount = (line.match(/[a-z0-9]/gi) || []).length;
-    if (!line || readableCharacterCount < 2 || OCR_METADATA_LABELS.some(label =>
+    if (OCR_METADATA_LABELS.some(label =>
       new RegExp(`^${label.replace(/\s+/g, '\\s+')}\\s*[:\\-]`, 'i').test(line)
     )) {
       return false;
     }
 
+    if (!isPlausibleRecipeTitle(line)) return false;
     return !/^(?:test kitchen recipe|recipe card|family recipe|recipe)$/i.test(line);
   });
 
@@ -212,6 +237,22 @@ function normalizeEthnicity(explicitValue, text) {
   return ethnicityRules.find(([, pattern]) => pattern.test(haystack))?.[0] || 'Other';
 }
 
+function getOCRQualityWarning(recipe) {
+  const detectedLines = [
+    ...String(recipe.ingredients || '').split('\n').filter(Boolean),
+    ...String(recipe.instructions || '').split('\n').filter(Boolean)
+  ];
+  const reasons = [];
+
+  if (recipe.confidence < 60) reasons.push('low recognition confidence');
+  if (recipe.title === 'Untitled Recipe') reasons.push('no reliable title');
+  if (detectedLines.length < 2) reasons.push('too little recipe content');
+
+  return reasons.length
+    ? 'OCR may be inaccurate (' + reasons.join(', ') + '). Please review every field before saving.'
+    : '';
+}
+
 function parseRecipeText(rawText, confidence = 0) {
   const text = normalizeOCRText(rawText);
   if (!text) {
@@ -226,8 +267,7 @@ function parseRecipeText(rawText, confidence = 0) {
   let instructionLines = getSectionLines(lines, instructionsIndex, -1);
 
   if (ingredientLines.length === 0) {
-    const ingredientPattern = /^(?:\d+(?:[ /.]\d+)?|[¼½¾⅓⅔⅛⅜⅝⅞])\s*(?:cups?|tablespoons?|tbsp|teaspoons?|tsp|ounces?|oz|pounds?|lb|grams?|g|kilograms?|kg|cloves?|cans?|packages?|large|medium|small)\b/i;
-    ingredientLines = lines.filter(line => ingredientPattern.test(line));
+    ingredientLines = lines.filter(looksLikeIngredientLine);
   }
 
   if (instructionLines.length === 0) {
@@ -239,7 +279,7 @@ function parseRecipeText(rawText, confidence = 0) {
   const ethnicityValue = extractLabeledValue(text, ['cuisine', 'ethnicity']);
   const cookTime = extractLabeledValue(text, ['cook time', 'cooking time', 'total time']);
 
-  return {
+  const recipe = {
     title: findRecipeTitle(lines, text),
     ingredients: ingredientLines.join('\n'),
     instructions: formatInstructionLines(instructionLines),
@@ -251,6 +291,9 @@ function parseRecipeText(rawText, confidence = 0) {
     confidence: Number.isFinite(confidence) ? Math.round(confidence) : 0,
     rawText: text
   };
+
+  recipe.qualityWarning = getOCRQualityWarning(recipe);
+  return recipe;
 }
 
 function mergeParsedRecipePages(pages) {
@@ -281,7 +324,7 @@ function mergeParsedRecipePages(pages) {
     .map(page => page.confidence)
     .filter(Number.isFinite);
 
-  return {
+  const mergedRecipe = {
     title: firstMeaningfulTitle,
     ingredients: uniqueIngredients.join('\n'),
     instructions: instructionSteps
@@ -297,6 +340,66 @@ function mergeParsedRecipePages(pages) {
       : 0,
     rawText: pages.map(page => page.rawText).filter(Boolean).join('\n\n')
   };
+
+  mergedRecipe.qualityWarning = getOCRQualityWarning(mergedRecipe);
+  return mergedRecipe;
+}
+
+async function loadImageForOCR(file) {
+  if (typeof window.createImageBitmap === 'function') {
+    try {
+      return await window.createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch (error) {
+      return await window.createImageBitmap(file);
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('The selected image could not be opened.'));
+    };
+    image.src = objectUrl;
+  });
+}
+
+async function preprocessImageForOCR(file) {
+  const source = await loadImageForOCR(file);
+  const sourceWidth = source.width || source.naturalWidth;
+  const sourceHeight = source.height || source.naturalHeight;
+  if (!sourceWidth || !sourceHeight) throw new Error('The selected image has no readable dimensions.');
+
+  const longestSide = Math.max(sourceWidth, sourceHeight);
+  const scale = longestSide < 1800
+    ? Math.min(2, 1800 / longestSide)
+    : Math.min(1, 2600 / longestSide);
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+  canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) throw new Error('Your browser could not prepare this image for OCR.');
+
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  if (typeof source.close === 'function') source.close();
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const pixels = imageData.data;
+  for (let index = 0; index < pixels.length; index += 4) {
+    const grayscale = (pixels[index] * 0.299) + (pixels[index + 1] * 0.587) + (pixels[index + 2] * 0.114);
+    const contrastAdjusted = Math.max(0, Math.min(255, ((grayscale - 128) * 1.35) + 136));
+    pixels[index] = contrastAdjusted;
+    pixels[index + 1] = contrastAdjusted;
+    pixels[index + 2] = contrastAdjusted;
+  }
+  context.putImageData(imageData, 0, 0);
+  return canvas;
 }
 
 async function performOCR(imageFiles, onProgress) {
@@ -329,10 +432,32 @@ async function performOCR(imageFiles, onProgress) {
   const recognizedPages = [];
 
   try {
+    if (typeof worker.setParameters === 'function') {
+      await worker.setParameters({
+        tessedit_pageseg_mode: window.Tesseract.PSM?.AUTO ?? 3,
+        preserve_interword_spaces: '1',
+        user_defined_dpi: '300'
+      });
+    }
+
     for (let index = 0; index < files.length; index += 1) {
       currentImageIndex = index + 1;
+      reportProgress({
+        status: 'Preparing image for OCR',
+        progress: 0,
+        imageIndex: currentImageIndex,
+        imageCount: files.length
+      });
+
+      let ocrImage = files[index];
+      try {
+        ocrImage = await preprocessImageForOCR(files[index]);
+      } catch (error) {
+        console.warn('Image preprocessing failed; using the original image.', error);
+      }
+
       console.log(`Performing OCR on ${files[index].name}`);
-      const { data } = await worker.recognize(files[index]);
+      const { data } = await worker.recognize(ocrImage, { rotateAuto: true });
       if (data?.text?.trim()) {
         recognizedPages.push(parseRecipeText(data.text, data.confidence));
       }
