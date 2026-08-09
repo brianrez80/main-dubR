@@ -148,6 +148,45 @@ assert.throws(
   /No readable text/
 );
 
+const multiPageRecipe = mergeParsedRecipePages([
+  parseRecipeText(`
+406 MX @ ° 0 ® 5G. G
+Preparation Time: 15 minutes | Cooking Time: 7 hours | Total Time: 7 hours 15 minutes
+Ingredients
+2 pounds chicken thighs
+1 teaspoon dried oregano
+`, 88),
+  parseRecipeText(`
+Slow Cooker Tuscan Chicken
+Ingredients
+1 cup heavy cream
+Salt and pepper to taste
+`, 91),
+  parseRecipeText(`
+Directions
+1. Season the chicken with oregano.
+2. Cook on low for 7 hours.
+`, 90),
+  parseRecipeText(`
+3. Stir in the heavy cream before serving.
+`, 89)
+]);
+
+assert.strictEqual(multiPageRecipe.title, 'Slow Cooker Tuscan Chicken');
+assert.strictEqual(multiPageRecipe.cookTime, '7 hours');
+assert.strictEqual(multiPageRecipe.metadata.prepTime, '15 minutes');
+assert.strictEqual(multiPageRecipe.metadata.totalTime, '7 hours 15 minutes');
+assert.strictEqual(multiPageRecipe.categories.main, 'Chicken');
+assert.strictEqual(multiPageRecipe.categories.ethnicity, 'Italian');
+assert.match(multiPageRecipe.ingredients, /1 teaspoon dried oregano/);
+assert.match(multiPageRecipe.ingredients, /Salt and pepper to taste/);
+assert.match(multiPageRecipe.ingredients, /1 cup heavy cream/);
+assert.match(multiPageRecipe.instructions, /^3\. Stir in the heavy cream before serving\./m);
+assert.doesNotMatch(
+  `${multiPageRecipe.ingredients}\n${multiPageRecipe.instructions}`,
+  /Preparation Time|Cooking Time|Total Time/
+);
+
 createDraftFromOCR(['image.jpg'], pancakes, 'Test Cook').then(draft => {
   assert.strictEqual(draft.name, 'Sunrise Lemon Pancakes');
   assert.strictEqual(draft.mainCategory, 'Breakfast');
