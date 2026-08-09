@@ -190,7 +190,7 @@ function addNexusSources(fileList, panel) {
     nexusImportState.queue.push({
       id: String(Date.now()) + '-' + Math.random().toString(16).slice(2),
       file, key: getNexusDuplicateKey(file), status: 'pending', error: '',
-      progress: 0, ocrData: null, recipe: null, openingReview: false
+      progress: 0, ocrData: null, recipe: null, warning: '', openingReview: false
     });
   });
   if (messageBox) messageBox.textContent = '';
@@ -231,8 +231,9 @@ function renderNexusQueue(panel) {
     actions.appendChild(remove);
 
     if (entry.status === 'ready') {
-      node.className = 'source-item is-ready';
-      statusNode.innerHTML = '&#10003;'; statusNode.title = 'Ready to review';
+      node.className = entry.warning ? 'source-item is-warning' : 'source-item is-ready';
+      statusNode.innerHTML = entry.warning ? '!' : '&#10003;';
+      statusNode.title = entry.warning ? 'Ready — OCR needs review' : 'Ready to review';
     } else if (entry.status === 'error') {
       node.className = 'source-item is-error';
       statusNode.textContent = '!'; statusNode.title = entry.error || 'Import failed';
@@ -300,10 +301,12 @@ function processNexusQueue(panel) {
       });
       if (!nexusImportState.queue.includes(nextEntry)) return;
       nextEntry.ocrData = parsedRecipe;
+      nextEntry.warning = parsedRecipe.qualityWarning || '';
       nextEntry.progress = 100; nextEntry.status = 'ready'; nextEntry.error = '';
       syncNexusState(); renderNexusQueue(panel);
-      updateNexusProgress(nextEntry, panel, 'processing', 3, 'Ready to review');
-      if (messageBox) messageBox.textContent = 'Recipe ready. Choose the source row to review it.';
+      const readyStatus = nextEntry.warning ? 'Ready with an OCR warning — review every field carefully' : 'Ready to review';
+      updateNexusProgress(nextEntry, panel, 'processing', 3, readyStatus);
+      if (messageBox) messageBox.textContent = nextEntry.warning || 'Recipe ready. Choose the source row to review it.';
     } catch (error) {
       if (!nexusImportState.queue.includes(nextEntry)) return;
       markNexusEntryFailed(nextEntry, error?.message);
@@ -341,7 +344,7 @@ function removeNexusSource(itemId, panel) {
 function retryNexusSource(itemId, panel) {
   const entry = nexusImportState.queue.find(item => item.id === itemId);
   if (!entry) return;
-  entry.status = 'pending'; entry.error = ''; entry.progress = 0; entry.ocrData = null;
+  entry.status = 'pending'; entry.error = ''; entry.warning = ''; entry.progress = 0; entry.ocrData = null;
   syncNexusState(); renderNexusQueue(panel); processNexusQueue(panel);
 }
 
