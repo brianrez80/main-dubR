@@ -1,5 +1,5 @@
 // Trixie Nexus Import Center — Phase 2 UI interactions only.
-// The import flow now processes image files one at a time using the existing OCR pipeline.
+// Each file-selection or drop batch is processed as one ordered multi-page recipe using the existing OCR pipeline.
 
 let nexusImportState = {
   queue: [],
@@ -14,7 +14,34 @@ function getNexusDuplicateKey(file) {
 
 function isNexusDuplicate(file, existingItems) {
   const key = getNexusDuplicateKey(file);
-  return existingItems.some(item => item.key === key);
+  return existingItems.some(item => {
+    if (Array.isArray(item.keys)) return item.keys.includes(key);
+    if (Array.isArray(item.files)) return item.files.some(candidate => getNexusDuplicateKey(candidate) === key);
+    return item.key === key;
+  });
+}
+
+function createNexusQueueEntry(files) {
+  const orderedFiles = Array.from(files || []).filter(Boolean);
+  return {
+    id: String(Date.now()) + '-' + Math.random().toString(16).slice(2),
+    files: orderedFiles,
+    keys: orderedFiles.map(getNexusDuplicateKey),
+    key: orderedFiles.map(getNexusDuplicateKey).join('|'),
+    status: 'pending',
+    error: '',
+    progress: 0,
+    ocrData: null,
+    recipe: null,
+    warning: '',
+    openingReview: false
+  };
+}
+
+function getNexusEntryLabel(entry) {
+  const files = Array.isArray(entry?.files) ? entry.files : [];
+  if (files.length <= 1) return files[0]?.name || 'Recipe image';
+  return files[0].name + ' (' + files.length + ' images)';
 }
 
 function clearIncompleteNexusImports(queue) {
@@ -106,14 +133,19 @@ function initializeNexus() {
   });
 }
 
-function createNexusSource(file, options = {}) {
-  const extension = (file.name.split('.').pop() || 'FILE').toUpperCase();
+function createNexusSource(files, options = {}) {
+  const sourceFiles = Array.from(files || []).filter(Boolean);
+  const firstFile = sourceFiles[0];
+  if (!firstFile) return null;
+
+  const extension = (firstFile.name.split('.').pop() || 'FILE').toUpperCase();
   const iconType = /PNG|JPG|JPEG|WEBP|GIF/.test(extension)
     ? 'img'
     : /DOC|DOCX/.test(extension) ? 'doc' : /TXT/.test(extension) ? 'txt' : extension.toLowerCase();
-  const size = file.size > 1048576
-    ? `${(file.size / 1048576).toFixed(1)} MB`
-    : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+  const totalSize = sourceFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+  const size = totalSize > 1048576
+    ? `${(totalSize / 1048576).toFixed(1)} MB`
+    : `${Math.max(1, Math.round(totalSize / 1024))} KB`;
   const item = document.createElement('article');
   item.className = 'source-item is-learning';
   item.dataset.nexusItemId = options.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -124,9 +156,13 @@ function createNexusSource(file, options = {}) {
   icon.textContent = extension.slice(0, 4);
   const details = document.createElement('div');
   const name = document.createElement('strong');
-  name.textContent = file.name;
+  name.textContent = sourceFiles.length > 1
+    ? `${firstFile.name} + ${sourceFiles.length - 1} more`
+    : firstFile.name;
   const meta = document.createElement('small');
-  meta.textContent = `${extension} · ${size}`;
+  meta.textContent = sourceFiles.length > 1
+    ? `${sourceFiles.length} images · ${size}`
+    : `${extension} · ${size}`;
   details.append(name, meta);
   const actions = document.createElement('div');
   actions.className = 'source-item-actions';
@@ -160,7 +196,7 @@ function addNexusSources(fileList, panel) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
   const messageBox = panel.querySelector('[data-nexus-message]');
-  const existingItems = nexusImportState.queue.map(item => ({ key: item.key }));
+  const existingItems = nexusImportState.queue;
   const acceptedFiles = [];
   let validationMessage = '';
 
@@ -178,7 +214,6 @@ function addNexusSources(fileList, panel) {
       return;
     }
     acceptedFiles.push(file);
-    existingItems.push({ key: getNexusDuplicateKey(file) });
   });
 
   if (!acceptedFiles.length) {
@@ -186,13 +221,7 @@ function addNexusSources(fileList, panel) {
     return;
   }
 
-  acceptedFiles.forEach(file => {
-    nexusImportState.queue.push({
-      id: String(Date.now()) + '-' + Math.random().toString(16).slice(2),
-      file, key: getNexusDuplicateKey(file), status: 'pending', error: '',
-      progress: 0, ocrData: null, recipe: null, warning: '', openingReview: false
-    });
-  });
+  nexusImportState.queue.push(createNexusQueueEntry(acceptedFiles));
   if (messageBox) messageBox.textContent = '';
   syncNexusState();
   renderNexusQueue(panel);
@@ -219,7 +248,8 @@ function renderNexusQueue(panel) {
 
   sourceList.replaceChildren();
   nexusImportState.queue.forEach(entry => {
-    const node = createNexusSource(entry.file, { id: entry.id, status: entry.status });
+    const node = createNexusSource(entry.files, { id: entry.id, status: entry.status });
+    if (!node) return;
     const statusNode = node.querySelector('.source-status');
     const actions = node.querySelector('.source-item-actions');
     node.dataset.nexusFileKey = entry.key;
@@ -263,7 +293,7 @@ function updateNexusProgress(entry, panel, stepName, stageIndex, statusText) {
   if (!progressName || !progressStatus || !progressSteps) return;
 
   const percent = entry ? Math.max(0, Math.min(100, Math.round(entry.progress || 0))) : 0;
-  progressName.textContent = entry ? entry.file.name : 'No files queued';
+  progressName.textContent = entry ? getNexusEntryLabel(entry) : 'No files queued';
   progressStatus.textContent = statusText || 'Waiting for recipe images...';
   if (percentNode) percentNode.textContent = percent + '%';
   if (progressBar) progressBar.style.width = percent + '%';
@@ -294,7 +324,7 @@ function processNexusQueue(panel) {
 
   void (async () => {
     try {
-      const parsedRecipe = await extractNexusRecipe(nextEntry.file, progress => {
+      const parsedRecipe = await extractNexusRecipe(nextEntry.files, progress => {
         if (!nexusImportState.queue.includes(nextEntry)) return;
         nextEntry.progress = progress.percent;
         updateNexusProgress(nextEntry, panel, 'processing', progress.stage, progress.status);
@@ -322,12 +352,16 @@ function processNexusQueue(panel) {
   })();
 }
 
-async function extractNexusRecipe(file, onProgress) {
-  const result = await performOCR([file], ({ status, progress, imageIndex, imageCount }) => {
+async function extractNexusRecipe(files, onProgress) {
+  const orderedFiles = Array.from(files || []).filter(Boolean);
+  const result = await performOCR(orderedFiles, ({ status, progress, imageIndex, imageCount }) => {
     const percent = Math.round(((imageIndex - 1 + progress) / imageCount) * 100);
     const normalizedStatus = String(status || '').toLowerCase();
     const stage = normalizedStatus.includes('recogniz') || normalizedStatus.includes('extract') ? 1 : 0;
-    if (typeof onProgress === 'function') onProgress({ percent, stage, status: status || 'Reading recipe...' });
+    const pageLabel = imageCount > 1 ? ` — image ${imageIndex} of ${imageCount}` : '';
+    if (typeof onProgress === 'function') {
+      onProgress({ percent, stage, status: (status || 'Reading recipe...') + pageLabel });
+    }
   });
   return result;
 }
@@ -354,10 +388,14 @@ async function showRecipeReviewFromImport(itemId, panel) {
   if (!entry || !entry.ocrData || entry.status !== 'ready' || entry.openingReview) return;
 
   entry.openingReview = true;
-  if (messageBox) messageBox.textContent = 'Saving the original image and preparing your review...';
+  if (messageBox) {
+    messageBox.textContent = entry.files.length > 1
+      ? 'Saving the original images and preparing your review...'
+      : 'Saving the original image and preparing your review...';
+  }
   try {
     const reviewRecipe = await createDraftFromOCR([], entry.ocrData, 'Cheryl');
-    const imageUrls = await uploadSelectedImages(reviewRecipe.id, [entry.file]);
+    const imageUrls = await uploadSelectedImages(reviewRecipe.id, entry.files);
     if (!imageUrls) throw new Error('The original recipe image could not be saved. Please try again.');
 
     reviewRecipe.images = imageUrls;
