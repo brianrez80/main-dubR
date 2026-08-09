@@ -33,7 +33,10 @@ const OCR_SOCIAL_PROMPT_PATTERNS = [
   /\b(?:see|check)\s+(?:the\s+)?comments?\s+for\s+(?:the\s+)?(?:full\s+)?recipe\b/i,
   /\bcomment\s+['"]?(?:recipe|yes)['"]?\s+(?:below\s+)?(?:for|to get)\b/i,
   /\blink\s+in\s+(?:my\s+|the\s+)?bio\b/i,
-  /\b(?:follow|like|share|save)\b.{0,40}\b(?:more|recipe|recipes)\b/i
+  /\b(?:follow|like|share|save)\b.{0,40}\b(?:more|recipe|recipes)\b/i,
+  /^\s*(?:write|add|leave)\s+(?:a\s+)?comment\b/i,
+  /^\s*(?:like|share|follow|save)\s*(?:this|for|the)?\s*(?:post|recipe|video)?\s*$/i,
+  /^\s*(?:view|read)\s+(?:all\s+)?comments?\b/i
 ];
 
 function normalizeOCRText(text) {
@@ -117,18 +120,34 @@ function extractLabeledValue(text, labels) {
     .trim();
 }
 
+function extractMetadataValue(text, labels) {
+  const strictValue = extractLabeledValue(text, labels);
+  if (strictValue) return strictValue;
+
+  const labelPattern = labels
+    .map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|');
+  const valueMatch = text.match(
+    new RegExp(`(?:^|\\n|\\|)\\s*(?:${labelPattern})\\s+([^\\n|]+)`, 'i')
+  );
+
+  return valueMatch?.[1]
+    .split(new RegExp(`\\s+(?=(?:${OCR_METADATA_LABELS.map(label => label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\s*(?::|-|\\s))`, 'i'))[0]
+    .trim() || '';
+}
+
 function getRecipeMetadata(text) {
   return {
-    prepTime: extractLabeledValue(text, ['prep time', 'preparation time']),
-    cookTime: extractLabeledValue(text, ['cook time', 'cooking time']),
-    totalTime: extractLabeledValue(text, ['total time']),
-    servings: extractLabeledValue(text, ['servings', 'serving size', 'yield'])
+    prepTime: extractMetadataValue(text, ['prep time', 'preparation time']),
+    cookTime: extractMetadataValue(text, ['cook time', 'cooking time']),
+    totalTime: extractMetadataValue(text, ['total time']),
+    servings: extractMetadataValue(text, ['servings', 'serving size', 'yield'])
   };
 }
 
 function isOCRMetadataLine(line) {
   const cleaned = cleanOCRLine(line);
-  return /^(?:prep(?:aration)? time|cook(?:ing)? time|total time|servings?|serving size|yield|main category|category|cuisine|ethnicity)\s*[:\-]/i.test(cleaned);
+  return /^(?:prep(?:aration)? time|cook(?:ing)? time|total time|servings?|serving size|yield|main category|category|cuisine|ethnicity)(?:\s*[:\-]|\s+)/i.test(cleaned);
 }
 
 function findSectionIndex(lines, section) {
@@ -142,7 +161,7 @@ function getSectionLines(lines, startIndex, endIndex) {
 
   for (const line of lines.slice(startIndex + 1, end)) {
     const cleaned = cleanOCRLine(line);
-    if (isSocialPromptLine(cleaned)) break;
+    if (isSocialPromptLine(cleaned)) continue;
     if (isOCRMetadataLine(cleaned)) continue;
     if (!isLikelyOCRNoise(cleaned)) sectionLines.push(cleaned);
   }
@@ -555,7 +574,7 @@ async function createDraftFromOCR(images, ocrData, contributorName) {
   const recipe = {
     id: generateId(),
     name: ocrData.title || 'Untitled Recipe',
-    time: ocrData.cookTime || '',
+    time: ocrData.cookTime || ocrData.metadata?.cookTime || ocrData.metadata?.totalTime || ocrData.metadata?.prepTime || '',
     mainCategory: ocrData.categories?.main || '',
     ethnicity: ocrData.categories?.ethnicity || '',
     notes: noteSections.join('\n\n'),
