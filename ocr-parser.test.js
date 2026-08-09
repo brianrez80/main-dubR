@@ -187,6 +187,34 @@ assert.doesNotMatch(
   /Preparation Time|Cooking Time|Total Time/
 );
 
+const reviewHandoffRecipe = mergeParsedRecipePages([
+  parseRecipeText(`
+Ingredients
+2 pounds chicken thighs
+Write a comment…
+1 teaspoon dried oregano
+Cooking Time 7 hours
+Directions
+1. Season the chicken.
+Write a comment…
+2. Cook on low for 7 hours.
+`, 89),
+  parseRecipeText(`
+3. Stir in the heavy cream.
+Like
+4. Serve warm.
+`, 90)
+]);
+
+assert.strictEqual(reviewHandoffRecipe.cookTime, '7 hours');
+assert.match(reviewHandoffRecipe.ingredients, /2 pounds chicken thighs/);
+assert.match(reviewHandoffRecipe.ingredients, /1 teaspoon dried oregano/);
+assert.match(reviewHandoffRecipe.instructions, /^4\. Serve warm\./m);
+assert.doesNotMatch(
+  `${reviewHandoffRecipe.ingredients}\n${reviewHandoffRecipe.instructions}`,
+  /Write a comment|^Like$|Cooking Time/im
+);
+
 createDraftFromOCR(['image.jpg'], pancakes, 'Test Cook').then(draft => {
   assert.strictEqual(draft.name, 'Sunrise Lemon Pancakes');
   assert.strictEqual(draft.mainCategory, 'Breakfast');
@@ -194,6 +222,17 @@ createDraftFromOCR(['image.jpg'], pancakes, 'Test Cook').then(draft => {
   assert.match(draft.notes, /^Ingredients\n/);
   assert.match(draft.notes, /\n\nInstructions\n/);
   assert.match(draft.ocrText, /Sunrise Lemon Pancakes/);
+  return createDraftFromOCR(
+    ['https://example.test/recipe-original.jpg'],
+    reviewHandoffRecipe,
+    'Test Cook'
+  );
+}).then(reviewDraft => {
+  assert.strictEqual(reviewDraft.time, '7 hours');
+  assert.deepStrictEqual(reviewDraft.images, ['https://example.test/recipe-original.jpg']);
+  assert.match(reviewDraft.notes, /^Ingredients\n/);
+  assert.match(reviewDraft.notes, /4\. Serve warm\./);
+  assert.doesNotMatch(reviewDraft.notes, /Write a comment|^Like$|Cooking Time/im);
   console.log('OCR parser tests passed.');
 }).catch(error => {
   console.error(error);
