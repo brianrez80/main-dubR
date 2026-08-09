@@ -18,11 +18,11 @@ const context = {
 };
 
 vm.runInNewContext(
-  `${source}\nthis.__ocrTests = { parseRecipeText, mergeParsedRecipePages, createDraftFromOCR };`,
+  `${source}\nthis.__ocrTests = { parseRecipeText, mergeParsedRecipePages, createDraftFromOCR, isLikelyOCRNoise, isPlausibleRecipeTitle, getOCRQualityWarning };`,
   context
 );
 
-const { parseRecipeText, mergeParsedRecipePages, createDraftFromOCR } = context.__ocrTests;
+const { parseRecipeText, mergeParsedRecipePages, createDraftFromOCR, isLikelyOCRNoise, isPlausibleRecipeTitle } = context.__ocrTests;
 
 const pancakeText = `
 LIVE OCR VERIFICATION RECIPE
@@ -122,6 +122,26 @@ assert.match(noisySocialPost.ingredients, /1 cup heavy cream/);
 assert.doesNotMatch(noisySocialPost.ingredients, /full recipe|weeknightrecipes|XZQPVTR/i);
 assert.match(noisySocialPost.instructions, /^3\. Stir in the garlic and cream\./m);
 assert.doesNotMatch(noisySocialPost.instructions, /full recipe|BLKQRTZZ|<<<|===/i);
+
+assert.strictEqual(isLikelyOCRNoise('406 MX @ ° 0 ® 5G. G'), true);
+assert.strictEqual(isPlausibleRecipeTitle('406 MX @ ° 0 ® 5G. G'), false);
+
+const lowQualityRecipe = parseRecipeText(`
+406 MX @ ° 0 ® 5G. G
+Ingredients
+1 teaspoon dried oregano
+Salt and pepper to taste
+1 cup heavy cream
+Directions
+1. Stir the oregano into the cream.
+`, 34);
+
+assert.strictEqual(lowQualityRecipe.title, 'Untitled Recipe');
+assert.match(lowQualityRecipe.ingredients, /1 teaspoon dried oregano/);
+assert.match(lowQualityRecipe.ingredients, /Salt and pepper to taste/);
+assert.match(lowQualityRecipe.ingredients, /1 cup heavy cream/);
+assert.match(lowQualityRecipe.instructions, /Stir the oregano into the cream/);
+assert.match(lowQualityRecipe.qualityWarning, /low recognition confidence|no reliable title/);
 
 assert.throws(
   () => parseRecipeText(''),
