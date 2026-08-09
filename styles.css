@@ -637,6 +637,19 @@ small {
   white-space: pre-wrap;
 }
 
+.review-publish-status {
+  margin: 12px 0 0;
+  font-weight: 600;
+}
+
+.review-publish-status.is-publishing {
+  color: var(--muted);
+}
+
+.review-publish-status.is-error {
+  color: #a52626;
+}
+
 /* OCR Upload */
 .progress-bar {
   width: 100%;

@@ -633,7 +633,7 @@ async function approveDraftRecipe(recipeId, editorName, updates) {
 
     await updateRecipe(recipeId, updatedRecipe);
     console.log('Recipe approved and published:', recipeId);
-    return true;
+    return updatedRecipe;
   } catch (error) {
     console.error('Error approving recipe:', error);
     throw error;
