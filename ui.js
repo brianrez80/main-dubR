@@ -97,7 +97,7 @@ function renderRecipes(recipes, title = 'Recipes') {
 
   ui.recipeList.innerHTML = recipes.map(recipe => {
     const images = getRecipeImages(recipe);
-    const imageHtml = renderImageHtml(images, recipe.name);
+    const imageHtml = renderImageHtml(images, recipe.name, 'recipe-image-gallery');
     const meta = [
       recipe.mainCategory,
       recipe.ethnicity,
