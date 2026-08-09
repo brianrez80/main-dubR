@@ -84,29 +84,14 @@ function initializeNexus() {
   nexusImportState.currentItem = null;
   renderNexusQueue(panel);
 
-  panel.addEventListener('click', async (event) => {
-    const removeButton = event.target.closest('[data-nexus-remove]');
-    if (removeButton) {
-      const itemId = removeButton.dataset.nexusRemove;
-      removeNexusSource(itemId, panel);
-      return;
-    }
-
-    const retryButton = event.target.closest('[data-nexus-retry]');
-    if (retryButton) {
-      const itemId = retryButton.dataset.nexusRetry;
-      retryNexusSource(itemId, panel);
-      return;
-    }
-  });
-
   panel.addEventListener('click', (event) => {
+    const removeButton = event.target.closest('[data-nexus-remove]');
+    if (removeButton) { event.preventDefault(); removeNexusSource(removeButton.dataset.nexusRemove, panel); return; }
+    const retryButton = event.target.closest('[data-nexus-retry]');
+    if (retryButton) { event.preventDefault(); retryNexusSource(retryButton.dataset.nexusRetry, panel); return; }
     const sourceItem = event.target.closest('.source-item');
-    if (sourceItem && sourceItem.dataset.nexusItemId && sourceItem.dataset.nexusStatus === 'ready') {
-      const recipe = sourceItem.dataset.nexusRecipe ? JSON.parse(sourceItem.dataset.nexusRecipe) : null;
-      if (recipe) {
-        showRecipeReviewFromImport(recipe, panel);
-      }
+    if (sourceItem && !event.target.closest('button') && sourceItem.dataset.nexusStatus === 'ready') {
+      showRecipeReviewFromImport(sourceItem.dataset.nexusItemId, panel);
     }
   });
 
@@ -154,58 +139,42 @@ function createNexusSource(file, options = {}) {
   return item;
 }
 
-function createNexusSourceEntry(item, panel) {
-  const sourceList = panel.querySelector('[data-source-list]');
-  const emptyState = panel.querySelector('[data-source-empty]');
-  if (!sourceList) return;
-  sourceList.appendChild(item);
-  if (emptyState) {
-    emptyState.classList.add('hidden');
-  }
-  updateNexusSourceCount(panel);
+function updateNexusSourceCount(panel) {
+  const count = panel.querySelector('[data-source-count]');
+  if (count) count.textContent = String(nexusImportState.queue.length);
 }
 
-function updateNexusSourceCount(panel) {
-  const sourceList = panel.querySelector('[data-source-list]');
-  const count = panel.querySelector('[data-source-count]');
-  if (sourceList && count) {
-    count.textContent = String(sourceList.children.length);
-  }
+function updateNexusReadiness(panel) {
+  const readiness = panel.querySelector('[data-nexus-readiness]');
+  const detail = panel.querySelector('[data-nexus-readiness-detail]');
+  const bar = panel.querySelector('[data-nexus-readiness-bar]');
+  const total = nexusImportState.queue.length;
+  const ready = nexusImportState.queue.filter(item => item.status === 'ready').length;
+  const progress = total ? Math.round((ready / total) * 100) : 0;
+  if (readiness) readiness.textContent = total + ' recipe source' + (total === 1 ? '' : 's') + ' added';
+  if (detail) detail.textContent = total ? ready + ' ready to review' : 'Waiting for your first recipe image';
+  if (bar) bar.style.width = progress + '%';
 }
 
 function addNexusSources(fileList, panel) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
-
-  const sourceList = panel.querySelector('[data-source-list]');
   const messageBox = panel.querySelector('[data-nexus-message]');
-  const existingItems = Array.from(sourceList?.children || []).map(node => ({
-    key: node.dataset.nexusFileKey,
-    element: node
-  })).filter(Boolean);
-
+  const existingItems = nexusImportState.queue.map(item => ({ key: item.key }));
   const acceptedFiles = [];
+  let validationMessage = '';
+
   files.forEach(file => {
     if (!file || !/\.(jpe?g|png)$/i.test(file.name)) {
+      validationMessage = 'Please choose a JPG, JPEG, or PNG recipe image.';
       return;
     }
     if (!file.size || file.size > 12 * 1024 * 1024) {
-      if (messageBox) {
-        messageBox.textContent = `${file.name} is larger than 12 MB. Please use a smaller image.`;
-      }
+      validationMessage = file.name + ' is larger than 12 MB. Please use a smaller image.';
       return;
     }
-    if (isNexusDuplicate(file, existingItems)) {
-      if (messageBox) {
-        messageBox.textContent = 'This recipe image is already in the import list.';
-      }
-      return;
-    }
-    const duplicateWithinSelection = acceptedFiles.some(candidate => getNexusDuplicateKey(candidate) === getNexusDuplicateKey(file));
-    if (duplicateWithinSelection) {
-      if (messageBox) {
-        messageBox.textContent = 'This recipe image is already in the import list.';
-      }
+    if (isNexusDuplicate(file, existingItems) || acceptedFiles.some(candidate => getNexusDuplicateKey(candidate) === getNexusDuplicateKey(file))) {
+      validationMessage = 'This recipe image is already in the import list.';
       return;
     }
     acceptedFiles.push(file);
@@ -213,24 +182,19 @@ function addNexusSources(fileList, panel) {
   });
 
   if (!acceptedFiles.length) {
+    if (messageBox && validationMessage) messageBox.textContent = validationMessage;
     return;
   }
 
   acceptedFiles.forEach(file => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const item = createNexusSource(file, { id, status: 'pending' });
-    item.dataset.nexusFileKey = getNexusDuplicateKey(file);
-    createNexusSourceEntry(item, panel);
     nexusImportState.queue.push({
-      id,
-      file,
-      key: item.dataset.nexusFileKey,
-      status: 'pending',
-      error: ''
+      id: String(Date.now()) + '-' + Math.random().toString(16).slice(2),
+      file, key: getNexusDuplicateKey(file), status: 'pending', error: '',
+      progress: 0, ocrData: null, recipe: null, openingReview: false
     });
-    syncNexusState();
   });
-
+  if (messageBox) messageBox.textContent = '';
+  syncNexusState();
   renderNexusQueue(panel);
   processNexusQueue(panel);
 }
@@ -251,65 +215,41 @@ function syncNexusState() {
 function renderNexusQueue(panel) {
   const sourceList = panel.querySelector('[data-source-list]');
   const emptyState = panel.querySelector('[data-source-empty]');
-  const messageBox = panel.querySelector('[data-nexus-message]');
   if (!sourceList) return;
-  Array.from(sourceList.children).forEach(node => {
-    const entry = nexusImportState.queue.find(item => item.id === node.dataset.nexusItemId);
-    if (!entry) return;
+
+  sourceList.replaceChildren();
+  nexusImportState.queue.forEach(entry => {
+    const node = createNexusSource(entry.file, { id: entry.id, status: entry.status });
     const statusNode = node.querySelector('.source-status');
-    const title = entry.status === 'processing' ? 'Processing' : entry.status === 'ready' ? 'Ready' : entry.status === 'error' ? 'Error' : 'Pending';
-    if (!node.querySelector('[data-nexus-remove]')) {
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'nexus-inline-action secondary';
-      remove.dataset.nexusRemove = entry.id;
-      remove.textContent = 'Remove';
-      node.appendChild(remove);
-    }
+    const actions = node.querySelector('.source-item-actions');
+    node.dataset.nexusFileKey = entry.key;
+    node.dataset.nexusStatus = entry.status;
+
+    const remove = document.createElement('button');
+    remove.type = 'button'; remove.className = 'nexus-inline-action secondary';
+    remove.dataset.nexusRemove = entry.id; remove.textContent = 'Remove';
+    actions.appendChild(remove);
+
     if (entry.status === 'ready') {
       node.className = 'source-item is-ready';
-      statusNode.className = 'source-status';
-      statusNode.innerHTML = '&#10003;';
-      statusNode.title = 'Ready';
-      node.dataset.nexusStatus = 'ready';
-      if (entry.recipe) {
-        node.dataset.nexusRecipe = JSON.stringify(entry.recipe);
-      }
+      statusNode.innerHTML = '&#10003;'; statusNode.title = 'Ready to review';
     } else if (entry.status === 'error') {
       node.className = 'source-item is-error';
-      statusNode.className = 'source-status';
-      statusNode.innerHTML = '!';
-      statusNode.title = 'Error';
-      node.dataset.nexusStatus = 'error';
-      if (!node.querySelector('[data-nexus-retry]')) {
-        const action = document.createElement('button');
-        action.type = 'button';
-        action.className = 'nexus-inline-action';
-        action.dataset.nexusRetry = entry.id;
-        action.textContent = 'Retry';
-        node.appendChild(action);
-      }
-    } else if (entry.status === 'processing') {
-      node.className = 'source-item is-learning';
-      statusNode.className = 'source-status';
-      statusNode.innerHTML = '•';
-      statusNode.title = 'Processing';
-      node.dataset.nexusStatus = 'processing';
+      statusNode.textContent = '!'; statusNode.title = entry.error || 'Import failed';
+      const retry = document.createElement('button');
+      retry.type = 'button'; retry.className = 'nexus-inline-action';
+      retry.dataset.nexusRetry = entry.id; retry.textContent = 'Retry';
+      actions.appendChild(retry);
     } else {
       node.className = 'source-item is-learning';
-      statusNode.className = 'source-status';
-      statusNode.innerHTML = '•';
-      statusNode.title = 'Pending';
-      node.dataset.nexusStatus = 'pending';
+      statusNode.innerHTML = '<i></i>';
+      statusNode.title = entry.status === 'processing' ? 'Processing' : 'Pending';
     }
+    sourceList.appendChild(node);
   });
   updateNexusSourceCount(panel);
-  if (emptyState) {
-    emptyState.classList.toggle('hidden', sourceList.children.length > 0);
-  }
-  if (messageBox) {
-    messageBox.textContent = '';
-  }
+  updateNexusReadiness(panel);
+  if (emptyState) emptyState.classList.toggle('hidden', nexusImportState.queue.length > 0);
 }
 
 function updateNexusProgress(entry, panel, stepName, stageIndex, statusText) {
@@ -317,122 +257,115 @@ function updateNexusProgress(entry, panel, stepName, stageIndex, statusText) {
   const progressStatus = panel.querySelector('[data-progress-status]');
   const progressSteps = panel.querySelector('[data-progress-steps]');
   const progressFile = panel.querySelector('[data-progress-file]');
+  const percentNode = panel.querySelector('[data-progress-percent]');
+  const progressBar = panel.querySelector('[data-nexus-progress]');
   if (!progressName || !progressStatus || !progressSteps) return;
+
+  const percent = entry ? Math.max(0, Math.min(100, Math.round(entry.progress || 0))) : 0;
   progressName.textContent = entry ? entry.file.name : 'No files queued';
   progressStatus.textContent = statusText || 'Waiting for recipe images...';
-  const items = progressSteps.querySelectorAll('li');
-  items.forEach((item, index) => {
-    item.className = index < stageIndex ? 'done' : index === stageIndex ? 'active' : '';
+  if (percentNode) percentNode.textContent = percent + '%';
+  if (progressBar) progressBar.style.width = percent + '%';
+  progressSteps.querySelectorAll('li').forEach((item, index) => {
+    item.className = stageIndex < 0 ? '' : index < stageIndex ? 'done' : index === stageIndex ? 'active' : '';
     const span = item.querySelector('span');
-    if (span) {
-      span.innerHTML = index < stageIndex ? '&#10003;' : '';
-    }
+    if (span) span.innerHTML = stageIndex >= 0 && index < stageIndex ? '&#10003;' : '';
   });
-  if (!entry && progressFile) {
-    progressFile.classList.remove('is-active');
-  } else if (progressFile) {
-    progressFile.classList.add('is-active');
-  }
+  if (progressFile) progressFile.classList.toggle('is-active', Boolean(entry));
 }
 
 function processNexusQueue(panel) {
   if (nexusImportState.processing) return;
-  const nextEntry = getNextNexusPendingEntry(nexusImportState.queue, nexusImportState.processing);
+  const nextEntry = getNextNexusPendingEntry(nexusImportState.queue, false);
   const messageBox = panel.querySelector('[data-nexus-message]');
   if (!nextEntry) {
-    updateNexusProgress(null, panel, '', 0, 'Waiting for recipe images...');
+    const latestReady = nexusImportState.queue.findLast(item => item.status === 'ready');
+    updateNexusProgress(latestReady || null, panel, '', latestReady ? 3 : -1, latestReady ? 'Ready to review' : 'Waiting for recipe images...');
     return;
   }
 
   nexusImportState.processing = true;
   nexusImportState.currentItem = nextEntry.id;
   nextEntry.status = 'processing';
-  syncNexusState();
-  renderNexusQueue(panel);
-  updateNexusProgress(nextEntry, panel, 'processing', 0, 'File received');
+  nextEntry.progress = 0;
+  syncNexusState(); renderNexusQueue(panel);
+  updateNexusProgress(nextEntry, panel, 'processing', 0, 'Preparing the recipe image...');
 
-  window.setTimeout(async () => {
+  void (async () => {
     try {
-      updateNexusProgress(nextEntry, panel, 'processing', 1, 'Reading recipe');
-      const parsedRecipe = await extractNexusRecipe(nextEntry.file);
-      nextEntry.recipe = parsedRecipe;
-      nextEntry.status = 'ready';
-      nextEntry.error = '';
-      syncNexusState();
-      renderNexusQueue(panel);
-      updateNexusProgress(nextEntry, panel, 'processing', 2, 'Organizing recipe details');
-      window.setTimeout(() => {
-        updateNexusProgress(nextEntry, panel, 'processing', 3, 'Ready to review');
-      }, 150);
-      if (messageBox) {
-        messageBox.textContent = 'Recipe ready. Choose a source row to review it.';
-      }
+      const parsedRecipe = await extractNexusRecipe(nextEntry.file, progress => {
+        if (!nexusImportState.queue.includes(nextEntry)) return;
+        nextEntry.progress = progress.percent;
+        updateNexusProgress(nextEntry, panel, 'processing', progress.stage, progress.status);
+      });
+      if (!nexusImportState.queue.includes(nextEntry)) return;
+      nextEntry.ocrData = parsedRecipe;
+      nextEntry.progress = 100; nextEntry.status = 'ready'; nextEntry.error = '';
+      syncNexusState(); renderNexusQueue(panel);
+      updateNexusProgress(nextEntry, panel, 'processing', 3, 'Ready to review');
+      if (messageBox) messageBox.textContent = 'Recipe ready. Choose the source row to review it.';
     } catch (error) {
-      nextEntry.status = 'error';
-      nextEntry.error = error.message || 'We could not read this recipe image.';
-      syncNexusState();
-      renderNexusQueue(panel);
-      updateNexusProgress(nextEntry, panel, 'processing', 0, error.message || 'We could not read this recipe image.');
-      if (messageBox) {
-        messageBox.textContent = error.message || 'We could not read this recipe image.';
-      }
+      if (!nexusImportState.queue.includes(nextEntry)) return;
+      markNexusEntryFailed(nextEntry, error?.message);
+      nextEntry.progress = 0;
+      syncNexusState(); renderNexusQueue(panel);
+      updateNexusProgress(nextEntry, panel, 'processing', -1, nextEntry.error);
+      if (messageBox) messageBox.textContent = nextEntry.error;
+      console.error('Recipe Import Center OCR error:', error);
     } finally {
-      nexusImportState.processing = false;
-      nexusImportState.currentItem = null;
+      nexusImportState.processing = false; nexusImportState.currentItem = null;
       processNexusQueue(panel);
     }
-  }, 400);
+  })();
 }
 
-async function extractNexusRecipe(file) {
+async function extractNexusRecipe(file, onProgress) {
   const result = await performOCR([file], ({ status, progress, imageIndex, imageCount }) => {
     const percent = Math.round(((imageIndex - 1 + progress) / imageCount) * 100);
-    const stage = status === 'Recognizing text' || status === 'Extracting text' ? 1 : 0;
-    if (stage === 0) {
-      return;
-    }
+    const normalizedStatus = String(status || '').toLowerCase();
+    const stage = normalizedStatus.includes('recogniz') || normalizedStatus.includes('extract') ? 1 : 0;
+    if (typeof onProgress === 'function') onProgress({ percent, stage, status: status || 'Reading recipe...' });
   });
-  const recipe = await createDraftFromOCR([file.name], result, 'Cheryl');
-  return recipe;
+  return result;
 }
 
 function removeNexusSource(itemId, panel) {
   nexusImportState.queue = removeNexusEntry(nexusImportState.queue, itemId);
-  const sourceItem = panel.querySelector(`[data-nexus-item-id="${itemId}"]`);
-  if (sourceItem) {
-    sourceItem.remove();
-  }
-  syncNexusState();
-  renderNexusQueue(panel);
-  if (!nexusImportState.queue.some(item => item.status === 'pending' || item.status === 'processing')) {
-    updateNexusProgress(null, panel, '', 0, 'Waiting for recipe images...');
+  syncNexusState(); renderNexusQueue(panel);
+  if (!nexusImportState.processing && !nexusImportState.queue.some(item => item.status === 'pending')) {
+    const latestReady = nexusImportState.queue.findLast(item => item.status === 'ready');
+    updateNexusProgress(latestReady || null, panel, '', latestReady ? 3 : -1, latestReady ? 'Ready to review' : 'Waiting for recipe images...');
   }
 }
 
 function retryNexusSource(itemId, panel) {
   const entry = nexusImportState.queue.find(item => item.id === itemId);
   if (!entry) return;
-  entry.status = 'pending';
-  entry.error = '';
-  syncNexusState();
-  renderNexusQueue(panel);
-  processNexusQueue(panel);
+  entry.status = 'pending'; entry.error = ''; entry.progress = 0; entry.ocrData = null;
+  syncNexusState(); renderNexusQueue(panel); processNexusQueue(panel);
 }
 
-function showRecipeReviewFromImport(recipe, panel) {
-  if (!recipe || !recipe.notes) {
-    const messageBox = panel.querySelector('[data-nexus-message]');
-    if (messageBox) {
-      messageBox.textContent = 'This recipe could not be reviewed yet. Try again with a clearer image.';
-    }
-    return;
+async function showRecipeReviewFromImport(itemId, panel) {
+  const entry = nexusImportState.queue.find(item => item.id === itemId);
+  const messageBox = panel.querySelector('[data-nexus-message]');
+  if (!entry || !entry.ocrData || entry.status !== 'ready' || entry.openingReview) return;
+
+  entry.openingReview = true;
+  if (messageBox) messageBox.textContent = 'Saving the original image and preparing your review...';
+  try {
+    const reviewRecipe = await createDraftFromOCR([], entry.ocrData, 'Cheryl');
+    const imageUrls = await uploadSelectedImages(reviewRecipe.id, [entry.file]);
+    if (!imageUrls) throw new Error('The original recipe image could not be saved. Please try again.');
+
+    reviewRecipe.images = imageUrls;
+    await submitOCRRecipe(reviewRecipe);
+    entry.recipe = reviewRecipe; entry.submitted = true;
+    if (Array.isArray(recipes) && !recipes.some(recipe => recipe.id === reviewRecipe.id)) recipes.push(reviewRecipe);
+    hideAllPanels(); showReviewComparison(reviewRecipe);
+  } catch (error) {
+    console.error('Recipe Import Center review preparation error:', error);
+    if (messageBox) messageBox.textContent = 'Could not open this recipe for review: ' + (error?.message || 'Please try again.');
+  } finally {
+    entry.openingReview = false;
   }
-  const reviewRecipe = {
-    ...recipe,
-    contributorName: 'Cheryl',
-    status: 'draft'
-  };
-  recipes.push(reviewRecipe);
-  hideAllPanels();
-  showReviewComparison(reviewRecipe);
 }
