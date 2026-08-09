@@ -18,9 +18,11 @@ const OCR_METADATA_LABELS = [
   'cuisine',
   'ethnicity',
   'prep time',
+  'preparation time',
   'cook time',
   'cooking time',
   'total time',
+  'serving size',
   'servings',
   'yield'
 ];
@@ -115,6 +117,20 @@ function extractLabeledValue(text, labels) {
     .trim();
 }
 
+function getRecipeMetadata(text) {
+  return {
+    prepTime: extractLabeledValue(text, ['prep time', 'preparation time']),
+    cookTime: extractLabeledValue(text, ['cook time', 'cooking time']),
+    totalTime: extractLabeledValue(text, ['total time']),
+    servings: extractLabeledValue(text, ['servings', 'serving size', 'yield'])
+  };
+}
+
+function isOCRMetadataLine(line) {
+  const cleaned = cleanOCRLine(line);
+  return /^(?:prep(?:aration)? time|cook(?:ing)? time|total time|servings?|serving size|yield|main category|category|cuisine|ethnicity)\s*[:\-]/i.test(cleaned);
+}
+
 function findSectionIndex(lines, section) {
   return lines.findIndex(line => OCR_SECTION_HEADINGS[section].test(line));
 }
@@ -127,6 +143,7 @@ function getSectionLines(lines, startIndex, endIndex) {
   for (const line of lines.slice(startIndex + 1, end)) {
     const cleaned = cleanOCRLine(line);
     if (isSocialPromptLine(cleaned)) break;
+    if (isOCRMetadataLine(cleaned)) continue;
     if (!isLikelyOCRNoise(cleaned)) sectionLines.push(cleaned);
   }
 
@@ -162,35 +179,50 @@ function formatInstructionLines(lines) {
     .join('\n');
 }
 
+function getTitleCandidates(lines, text) {
+  const firstSectionIndex = [findSectionIndex(lines, 'ingredients'), findSectionIndex(lines, 'instructions')]
+    .filter(index => index >= 0)
+    .sort((a, b) => a - b)[0];
+  const searchEnd = Number.isInteger(firstSectionIndex) ? firstSectionIndex : Math.min(lines.length, 6);
+
+  return lines.slice(0, searchEnd).reduce((candidates, line, index) => {
+    if (isOCRMetadataLine(line) || !isPlausibleRecipeTitle(line)) return candidates;
+    if (/^(?:test kitchen recipe|recipe card|family recipe|recipe)$/i.test(line)) return candidates;
+    if (/\brecipe\b/i.test(line) && /\b(?:test|verification|kitchen|family|cookbook|collection|card)\b/i.test(line)) return candidates;
+
+    const words = line.match(/[a-z][a-z'-]*/gi) || [];
+    const titleCaseWords = words.filter(word => /^[A-Z][a-z'-]*$/.test(word)).length;
+    const score = (Number.isInteger(firstSectionIndex) ? 30 : 0)
+      + Math.min(words.length, 7)
+      + (titleCaseWords / Math.max(words.length, 1))
+      - (index * 0.5);
+
+    candidates.push({ title: cleanOCRLine(line), score });
+    return candidates;
+  }, []);
+}
+
 function findRecipeTitle(lines, text) {
   const explicitTitle = extractLabeledValue(text, ['recipe title', 'title']);
   if (explicitTitle && isPlausibleRecipeTitle(explicitTitle)) return explicitTitle;
 
-  const firstSectionIndex = [findSectionIndex(lines, 'ingredients'), findSectionIndex(lines, 'instructions')]
-    .filter(index => index >= 0)
-    .sort((a, b) => a - b)[0] ?? lines.length;
+  const candidates = getTitleCandidates(lines, text);
+  return candidates.sort((a, b) => b.score - a.score)[0]?.title || 'Untitled Recipe';
+}
 
-  const candidates = lines.slice(0, firstSectionIndex).filter(line => {
-    if (OCR_METADATA_LABELS.some(label =>
-      new RegExp(`^${label.replace(/\s+/g, '\\s+')}\\s*[:\\-]`, 'i').test(line)
-    )) {
-      return false;
-    }
+function findBestRecipeTitle(pages) {
+  const candidates = [];
 
-    if (!isPlausibleRecipeTitle(line)) return false;
-    return !/^(?:test kitchen recipe|recipe card|family recipe|recipe)$/i.test(line);
+  pages.forEach((page, pageIndex) => {
+    const lines = String(page.rawText || '').split('\n').map(cleanOCRLine).filter(Boolean);
+    getTitleCandidates(lines, page.rawText).forEach(candidate => {
+      candidates.push({ ...candidate, pageIndex });
+    });
   });
 
-  const titleCandidate = candidates.find((line, index) => {
-    const hasCandidateAfterIt = index < candidates.length - 1;
-    const looksLikeRecipeKicker = (
-      /\brecipe\b/i.test(line) &&
-      /\b(?:test|verification|kitchen|family|cookbook|collection|card)\b/i.test(line)
-    );
-    return !(hasCandidateAfterIt && looksLikeRecipeKicker);
-  });
-
-  return cleanOCRLine(titleCandidate || candidates[0] || 'Untitled Recipe');
+  return candidates
+    .sort((a, b) => b.score - a.score || a.pageIndex - b.pageIndex)[0]
+    ?.title || 'Untitled Recipe';
 }
 
 function normalizeMainCategory(explicitValue, text) {
@@ -226,15 +258,25 @@ function normalizeEthnicity(explicitValue, text) {
   if (direct) return direct;
 
   const haystack = `${explicitValue || ''}\n${text}`.toLowerCase();
-  const ethnicityRules = [
-    ['Mexican', /\b(?:mexican|taco|enchilada|burrito|salsa)\b/],
-    ['Italian', /\b(?:italian|pasta|lasagna|risotto|parmesan)\b/],
-    ['Mediterranean', /\b(?:mediterranean|greek|middle eastern|hummus|falafel)\b/],
-    ['Asian', /\b(?:asian|chinese|japanese|korean|thai|vietnamese|indian|curry|teriyaki)\b/],
-    ['American', /\b(?:american|southern|cajun|creole|barbecue|bbq)\b/]
+  const explicitRules = [
+    ['Mexican', /\b(?:mexican|mexico|tex-mex)\b/],
+    ['Italian', /\b(?:italian|tuscan)\b/],
+    ['Mediterranean', /\b(?:mediterranean|greek|middle eastern)\b/],
+    ['Asian', /\b(?:asian|chinese|japanese|korean|thai|vietnamese|indian)\b/],
+    ['American', /\b(?:american|southern|cajun|creole)\b/]
   ];
 
-  return ethnicityRules.find(([, pattern]) => pattern.test(haystack))?.[0] || 'Other';
+  const explicitMatch = explicitRules.find(([, pattern]) => pattern.test(haystack));
+  if (explicitMatch) return explicitMatch[0];
+
+  const pairedEvidence = [
+    ['Mexican', [/\b(?:taco|enchilada|burrito|quesadilla)\b/, /\b(?:salsa|tortilla|cilantro|jalape[nñ]o)\b/]],
+    ['Italian', [/\b(?:pasta|risotto|lasagna|marinara)\b/, /\b(?:parmesan|mozzarella|ricotta|basil)\b/]],
+    ['Mediterranean', [/\b(?:feta|hummus|falafel|tzatziki)\b/, /\b(?:olive|lemon|chickpea|cucumber)\b/]],
+    ['Asian', [/\b(?:soy sauce|sesame oil|teriyaki|miso)\b/, /\b(?:ginger|scallion|bok choy|rice vinegar)\b/]]
+  ];
+
+  return pairedEvidence.find(([, patterns]) => patterns.every(pattern => pattern.test(haystack)))?.[0] || 'Other';
 }
 
 function getOCRQualityWarning(recipe) {
@@ -266,24 +308,22 @@ function parseRecipeText(rawText, confidence = 0) {
   let ingredientLines = getSectionLines(lines, ingredientsIndex, instructionsIndex);
   let instructionLines = getSectionLines(lines, instructionsIndex, -1);
 
-  if (ingredientLines.length === 0) {
-    ingredientLines = lines.filter(looksLikeIngredientLine);
-  }
-
+  if (ingredientLines.length === 0) ingredientLines = lines.filter(looksLikeIngredientLine);
   if (instructionLines.length === 0) {
     const instructionPattern = /^(?:\d{1,2}[.)]\s*)?(?:add|bake|beat|blend|boil|combine|cook|fold|heat|mix|place|pour|preheat|serve|stir|whisk)\b/i;
     instructionLines = lines.filter(line => instructionPattern.test(line));
   }
 
+  const metadata = getRecipeMetadata(text);
   const categoryValue = extractLabeledValue(text, ['main category', 'category']);
   const ethnicityValue = extractLabeledValue(text, ['cuisine', 'ethnicity']);
-  const cookTime = extractLabeledValue(text, ['cook time', 'cooking time', 'total time']);
 
   const recipe = {
     title: findRecipeTitle(lines, text),
     ingredients: ingredientLines.join('\n'),
     instructions: formatInstructionLines(instructionLines),
-    cookTime,
+    cookTime: metadata.cookTime || metadata.totalTime || metadata.prepTime,
+    metadata,
     categories: {
       main: normalizeMainCategory(categoryValue, text),
       ethnicity: normalizeEthnicity(ethnicityValue, text)
@@ -298,47 +338,73 @@ function parseRecipeText(rawText, confidence = 0) {
 
 function mergeParsedRecipePages(pages) {
   const uniqueIngredients = [];
-  const instructionSteps = [];
+  const instructionLines = [];
+  let activeSection = '';
+  let foundSectionContent = false;
 
   pages.forEach(page => {
-    String(page.ingredients || '').split('\n').filter(Boolean).forEach(ingredient => {
-      if (!uniqueIngredients.includes(ingredient)) uniqueIngredients.push(ingredient);
-    });
+    const lines = String(page.rawText || '').split('\n').map(cleanOCRLine).filter(Boolean);
+    const firstSectionIndex = [findSectionIndex(lines, 'ingredients'), findSectionIndex(lines, 'instructions')]
+      .filter(index => index >= 0)
+      .sort((a, b) => a - b)[0];
 
-    String(page.instructions || '').split('\n').filter(Boolean).forEach(instruction => {
-      const step = instruction.replace(/^\d{1,2}[.)]\s*/, '').trim();
-      if (step) instructionSteps.push(step);
+    lines.forEach((line, index) => {
+      if (Number.isInteger(firstSectionIndex) && index < firstSectionIndex) return;
+      if (OCR_SECTION_HEADINGS.ingredients.test(line)) {
+        activeSection = 'ingredients';
+        foundSectionContent = true;
+        return;
+      }
+      if (OCR_SECTION_HEADINGS.instructions.test(line)) {
+        activeSection = 'instructions';
+        foundSectionContent = true;
+        return;
+      }
+      if (!activeSection || isOCRMetadataLine(line) || isLikelyOCRNoise(line)) return;
+
+      if (activeSection === 'ingredients') {
+        if (!uniqueIngredients.some(ingredient => ingredient.toLowerCase() === line.toLowerCase())) {
+          uniqueIngredients.push(line);
+        }
+      } else {
+        instructionLines.push(line);
+      }
     });
   });
 
-  const firstMeaningfulTitle = pages.find(
-    page => page.title && page.title !== 'Untitled Recipe'
-  )?.title || 'Untitled Recipe';
-  const firstKnownCategory = pages.find(
-    page => page.categories?.main && page.categories.main !== 'Other'
-  )?.categories?.main || 'Other';
-  const firstKnownEthnicity = pages.find(
-    page => page.categories?.ethnicity && page.categories.ethnicity !== 'Other'
-  )?.categories?.ethnicity || 'Other';
-  const confidenceValues = pages
-    .map(page => page.confidence)
-    .filter(Number.isFinite);
+  if (!foundSectionContent) {
+    pages.forEach(page => {
+      String(page.ingredients || '').split('\n').filter(Boolean).forEach(ingredient => {
+        if (!uniqueIngredients.some(existing => existing.toLowerCase() === ingredient.toLowerCase())) uniqueIngredients.push(ingredient);
+      });
+      String(page.instructions || '').split('\n').filter(Boolean).forEach(instruction => {
+        instructionLines.push(instruction.replace(/^\d{1,2}[.)]\s*/, '').trim());
+      });
+    });
+  }
 
+  const metadata = pages.reduce((result, page) => ({
+    prepTime: result.prepTime || page.metadata?.prepTime || '',
+    cookTime: result.cookTime || page.metadata?.cookTime || '',
+    totalTime: result.totalTime || page.metadata?.totalTime || '',
+    servings: result.servings || page.metadata?.servings || ''
+  }), { prepTime: '', cookTime: '', totalTime: '', servings: '' });
+  const confidenceValues = pages.map(page => page.confidence).filter(Number.isFinite);
+  const mergedText = pages.map(page => page.rawText).filter(Boolean).join('\n\n');
   const mergedRecipe = {
-    title: firstMeaningfulTitle,
+    title: findBestRecipeTitle(pages),
     ingredients: uniqueIngredients.join('\n'),
-    instructions: instructionSteps
-      .map((step, index) => `${index + 1}. ${step}`)
-      .join('\n'),
-    cookTime: pages.find(page => page.cookTime)?.cookTime || '',
+    instructions: formatInstructionLines(instructionLines),
+    cookTime: metadata.cookTime || metadata.totalTime || metadata.prepTime,
+    metadata,
     categories: {
-      main: firstKnownCategory,
-      ethnicity: firstKnownEthnicity
+      main: normalizeMainCategory('', mergedText),
+      ethnicity: normalizeEthnicity('', mergedText)
     },
     confidence: confidenceValues.length
       ? Math.round(confidenceValues.reduce((sum, value) => sum + value, 0) / confidenceValues.length)
       : 0,
-    rawText: pages.map(page => page.rawText).filter(Boolean).join('\n\n')
+    rawText: mergedText
   };
 
   mergedRecipe.qualityWarning = getOCRQualityWarning(mergedRecipe);
