@@ -32,6 +32,7 @@ async function initializeApp() {
   renderCategoryChips();
   renderOCRUploadForm();
 
+  window.dispatchEvent(new Event('recipe-box-ready'));
   console.log('App initialized successfully');
 }
 
