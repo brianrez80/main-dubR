@@ -73,6 +73,10 @@ function initializeNexus() {
   const browseButton = panel.querySelector('[data-nexus-browse]');
   const closeButton = panel.querySelector('[data-nexus-close]');
   const messageBox = panel.querySelector('[data-nexus-message]');
+  const urlRow = panel.querySelector('[data-nexus-url-row]');
+  const urlOpenButton = panel.querySelector('[data-nexus-url-open]');
+  const urlForm = panel.querySelector('[data-nexus-url-form]');
+  const urlCancelButton = panel.querySelector('[data-nexus-url-cancel]');
 
   panel.dataset.initialized = 'true';
   browseButton.addEventListener('click', (event) => {
@@ -104,6 +108,12 @@ function initializeNexus() {
     hideAllPanels();
     showPanel(ui.homeView);
   });
+  urlOpenButton?.addEventListener('click', () => openNexusRecipeLinkForm(urlForm));
+  urlRow?.addEventListener('click', event => {
+    if (!event.target.closest('[data-nexus-url-form]')) openNexusRecipeLinkForm(urlForm);
+  });
+  urlCancelButton?.addEventListener('click', () => closeNexusRecipeLinkForm(urlForm));
+  urlForm?.addEventListener('submit', handleNexusRecipeLinkImport);
 
   window.sessionStorage.removeItem('nexusImportState');
   nexusImportState.queue = [];
@@ -131,6 +141,52 @@ function initializeNexus() {
       window.sessionStorage.removeItem('nexusImportState');
     }
   });
+}
+
+function openNexusRecipeLinkForm(form) {
+  if (!form) return;
+  form.classList.remove('hidden');
+  form.querySelector('input')?.focus();
+}
+
+function closeNexusRecipeLinkForm(form) {
+  if (!form) return;
+  form.reset();
+  const status = form.querySelector('[data-nexus-url-status]');
+  if (status) status.textContent = '';
+  form.classList.add('hidden');
+}
+
+async function handleNexusRecipeLinkImport(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const status = form.querySelector('[data-nexus-url-status]');
+  const submitted = classifyRecipeLink(new FormData(form).get('recipeLinkUrl'));
+  if (submitted.error) {
+    if (status) status.textContent = submitted.error;
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+  if (status) status.textContent = 'Creating your draft…';
+  try {
+    const draftRecipe = {
+      id: generateId(), name: 'Untitled Recipe', time: '', mainCategory: '', ethnicity: '', notes: '',
+      status: 'draft', contributorName: 'Cheryl', images: [],
+      videoUrl: submitted.kind === 'video' ? submitted.url : '',
+      sourceUrl: submitted.kind === 'source' ? submitted.url : ''
+    };
+    await saveNewRecipe(draftRecipe);
+    recipes.push(draftRecipe);
+    closeNexusRecipeLinkForm(form);
+    hideAllPanels();
+    showReviewComparison(draftRecipe);
+  } catch (error) {
+    if (status) status.textContent = `Could not create the draft: ${error.message}`;
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
 }
 
 function createNexusSource(files, options = {}) {

@@ -248,10 +248,19 @@
             </div>
           </div>
 
-          <div class="nexus-url-row">
+          <div class="nexus-url-row" data-nexus-url-row>
             <span class="url-icon" aria-hidden="true">&#9678;</span>
             <div><strong>Have a recipe website?</strong><small>Paste a recipe link to import it.</small></div>
-            <button type="button" disabled>Coming soon</button>
+            <button type="button" data-nexus-url-open>Add recipe link</button>
+            <form class="nexus-url-form hidden" data-nexus-url-form>
+              <label for="nexusRecipeUrl">Recipe or video link</label>
+              <div>
+                <input id="nexusRecipeUrl" name="recipeLinkUrl" type="url" inputmode="url" required placeholder="https://example.com/my-recipe">
+                <button type="submit">Add Recipe Link</button>
+                <button type="button" data-nexus-url-cancel>Cancel</button>
+              </div>
+              <p data-nexus-url-status role="status" aria-live="polite"></p>
+            </form>
           </div>
         </div>
 
