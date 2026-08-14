@@ -46,6 +46,7 @@ function createAppContext() {
   }
 
   const context = {
+    URL,
     FormData: TestFormData,
     console: { log() {}, error() {}, warn() {} },
     confirm: () => false,
@@ -67,6 +68,7 @@ function createAppContext() {
     setTimeout() {}
   };
   vm.createContext(context);
+  vm.runInContext(fs.readFileSync(path.join(root, 'recipe-links.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(root, 'app.js'), 'utf8'), context);
   return { context, listeners };
 }
@@ -150,7 +152,8 @@ async function run() {
     const { context } = createAppContext();
     vm.runInContext(`recipes = [{
       id: 'draft-2', status: 'draft', images: ['one.jpg', 'two.jpg'],
-      ocrText: '{"source":"ocr"}', contributorName: 'Brian', imageUrl: '["one.jpg","two.jpg"]'
+      ocrText: '{"source":"ocr"}', contributorName: 'Brian', imageUrl: '["one.jpg","two.jpg"]',
+      videoUrl: 'https://youtu.be/abcDEF12345', sourceUrl: 'https://example.com/original'
     }];`, context);
     context.approveDraftRecipe = async (id, editor, updates) => ({
       ...updates,
@@ -159,7 +162,8 @@ async function run() {
       reviewedAt: '2026-08-09T19:00:00.000Z'
     });
     const form = makeForm('draft-2', {
-      name: 'Edited Recipe', time: '30 min', mainCategory: 'Chicken', ethnicity: 'Italian', notes: 'Edited notes'
+      name: 'Edited Recipe', time: '30 min', mainCategory: 'Chicken', ethnicity: 'Italian', notes: 'Edited notes',
+      videoUrl: 'https://youtu.be/abcDEF12345', sourceUrl: 'https://example.com/original'
     });
     await context.handleApproveRecipe('draft-2', new context.FormData(form));
     const approved = vm.runInContext('recipes[0]', context);
@@ -172,6 +176,8 @@ async function run() {
     assert.deepEqual(approved.images, ['one.jpg', 'two.jpg']);
     assert.equal(approved.ocrText, '{"source":"ocr"}');
     assert.equal(approved.contributorName, 'Brian');
+    assert.equal(approved.videoUrl, 'https://youtu.be/abcDEF12345');
+    assert.equal(approved.sourceUrl, 'https://example.com/original');
   });
 
   await test('a publish failure shows useful inline feedback and restores the button', async () => {

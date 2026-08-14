@@ -648,6 +648,19 @@ function renderOCRUploadForm() {
   if (!form) return;
 
   form.innerHTML = `
+    <section class="recipe-link-import" aria-labelledby="recipe-link-import-title">
+      <h4 id="recipe-link-import-title">Have a recipe website?</h4>
+      <p>Paste a recipe link to add it to the Review Queue. You can finish the recipe details before publishing.</p>
+      <form class="recipe-link-import-form" data-recipe-link-form>
+        <label for="recipeLinkUrl">Recipe or video link</label>
+        <div class="recipe-link-import-controls">
+          <input id="recipeLinkUrl" name="recipeLinkUrl" type="url" inputmode="url" required placeholder="https://example.com/my-recipe">
+          <button type="submit" class="btn save">Add Recipe Link</button>
+        </div>
+        <p class="recipe-link-import-status" data-recipe-link-status role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
     <form id="ocrUploadForm" class="form">
       <div class="form-section full">
         <label for="contributorName">Your Name (for credit)</label>
@@ -687,6 +700,50 @@ function renderOCRUploadForm() {
       hideAllPanels();
       showPanel(ui.homeView);
     });
+  }
+
+  const recipeLinkForm = form.querySelector('[data-recipe-link-form]');
+  if (recipeLinkForm) recipeLinkForm.addEventListener('submit', handleRecipeLinkImport);
+}
+
+async function handleRecipeLinkImport(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const status = form.querySelector('[data-recipe-link-status]');
+  const submitted = classifyRecipeLink(new FormData(form).get('recipeLinkUrl'));
+  if (submitted.error) {
+    if (status) status.textContent = submitted.error;
+    return;
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = true;
+  if (status) status.textContent = 'Creating your draft…';
+
+  try {
+    const draftRecipe = {
+      id: generateId(),
+      name: 'Untitled Recipe',
+      time: '',
+      mainCategory: '',
+      ethnicity: '',
+      notes: '',
+      status: 'draft',
+      contributorName: 'Cheryl',
+      videoUrl: submitted.kind === 'video' ? submitted.url : '',
+      sourceUrl: submitted.kind === 'source' ? submitted.url : '',
+      images: []
+    };
+    await saveNewRecipe(draftRecipe);
+    recipes.push(draftRecipe);
+    form.reset();
+    if (status) status.textContent = 'Draft created. Complete the details, then approve and publish it.';
+    hideAllPanels();
+    showReviewComparison(draftRecipe);
+  } catch (error) {
+    if (status) status.textContent = `Could not create the draft: ${error.message}`;
+  } finally {
+    if (submitButton) submitButton.disabled = false;
   }
 }
 
