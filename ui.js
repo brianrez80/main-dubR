@@ -104,7 +104,7 @@ function renderRecipes(recipes, title = 'Recipes') {
       recipe.time && `${recipe.time}`
     ].filter(Boolean).join(' • ');
 
-    return `<article class="recipe-item">
+    return `<article class="recipe-item" data-recipe-id="${escapeHtml(recipe.id)}">
       <h4>${escapeHtml(recipe.name)}</h4>
       <div class="meta">${escapeHtml(meta)}</div>
       ${imageHtml}
@@ -115,6 +115,50 @@ function renderRecipes(recipes, title = 'Recipes') {
       </div>
     </article>`;
   }).join('');
+
+  ui.recipeList.querySelectorAll('.recipe-item[data-recipe-id]').forEach(card => {
+    const recipe = recipes.find(item => String(item.id) === card.dataset.recipeId);
+    if (recipe) appendRecipeLinks(card, recipe);
+  });
+}
+
+function appendRecipeLinks(card, recipe) {
+  const videoUrl = normalizeRecipeUrl(recipe.videoUrl).url;
+  const sourceUrl = normalizeRecipeUrl(recipe.sourceUrl).url;
+  const embedUrl = getYouTubeEmbedUrl(videoUrl);
+  const actions = card.querySelector('.actions');
+
+  if (embedUrl) {
+    const container = document.createElement('div');
+    container.className = 'recipe-video-container';
+    const iframe = document.createElement('iframe');
+    iframe.className = 'recipe-video-iframe';
+    iframe.src = embedUrl;
+    iframe.title = `${recipe.name || 'Recipe'} video`;
+    iframe.loading = 'lazy';
+    iframe.allowFullscreen = true;
+    iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share');
+    container.appendChild(iframe);
+    card.insertBefore(container, actions);
+  } else if (videoUrl) {
+    const watch = document.createElement('a');
+    watch.className = 'btn recipe-video-button';
+    watch.href = videoUrl;
+    watch.target = '_blank';
+    watch.rel = 'noopener noreferrer';
+    watch.textContent = '▶ Watch Recipe Video';
+    card.insertBefore(watch, actions);
+  }
+
+  if (sourceUrl) {
+    const source = document.createElement('a');
+    source.className = 'recipe-source-link';
+    source.href = sourceUrl;
+    source.target = '_blank';
+    source.rel = 'noopener noreferrer';
+    source.textContent = 'View Original Recipe →';
+    card.insertBefore(source, actions);
+  }
 }
 
 // Render draft recipes waiting for review
@@ -224,6 +268,18 @@ function showReviewComparison(recipe) {
       <div class="form-section">
         <label for="review-notes">Ingredients / Instructions</label>
         <textarea id="review-notes" name="notes" required>${escapeHtml(recipe.notes || '')}</textarea>
+      </div>
+
+      <div class="form-section full">
+        <label for="review-video-url">Recipe Video Link</label>
+        <input type="url" id="review-video-url" name="videoUrl" value="${escapeHtml(recipe.videoUrl || '')}" placeholder="https://www.youtube.com/watch?v=...">
+        <small>Paste a YouTube or other recipe video link.</small>
+      </div>
+
+      <div class="form-section full">
+        <label for="review-source-url">Original Recipe Link</label>
+        <input type="url" id="review-source-url" name="sourceUrl" value="${escapeHtml(recipe.sourceUrl || '')}" placeholder="https://example.com/my-recipe">
+        <small>Optional link to the original recipe page.</small>
       </div>
 
       <div class="form-actions">

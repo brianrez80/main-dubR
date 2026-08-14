@@ -33,7 +33,9 @@ function mapDbRecipe(row) {
     reviewedAt: row.reviewed_at || null,
     image: row.image || null,
     images: Array.isArray(row.images) ? row.images : null,
-    imageUrl: row.image_url || null
+    imageUrl: row.image_url || null,
+    videoUrl: row.video_url || '',
+    sourceUrl: row.source_url || ''
   };
 }
 
@@ -51,7 +53,9 @@ function mapRecipeToDb(recipe) {
     contributor_name: recipe.contributorName || null,
     reviewed_by: recipe.reviewedBy || null,
     reviewed_at: recipe.reviewedAt || null,
-    image_url: JSON.stringify(Array.isArray(recipe.images) ? recipe.images : [])
+    image_url: JSON.stringify(Array.isArray(recipe.images) ? recipe.images : []),
+    video_url: recipe.videoUrl || null,
+    source_url: recipe.sourceUrl || null
   };
 }
 
@@ -69,7 +73,9 @@ function mapRecipeUpdatesToDb(updates) {
     ocrText: 'ocr_text',
     contributorName: 'contributor_name',
     reviewedBy: 'reviewed_by',
-    reviewedAt: 'reviewed_at'
+    reviewedAt: 'reviewed_at',
+    videoUrl: 'video_url',
+    sourceUrl: 'source_url'
   };
 
   Object.entries(fieldMap).forEach(([uiField, dbField]) => {

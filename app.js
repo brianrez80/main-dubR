@@ -120,6 +120,8 @@ async function handleFormSubmit() {
   const mainCategory = document.getElementById('mainCategory')?.value;
   const ethnicity = document.getElementById('ethnicity')?.value;
   const notes = document.getElementById('notes')?.value?.trim();
+  const videoLink = normalizeRecipeUrl(document.getElementById('videoUrl')?.value);
+  const sourceLink = normalizeRecipeUrl(document.getElementById('sourceUrl')?.value);
   const imageFiles = Array.from(ui.imageInput?.files || []);
 
   if (!recipeName || !mainCategory || !ethnicity || !notes) {
@@ -127,8 +129,15 @@ async function handleFormSubmit() {
     return;
   }
 
+  if (videoLink.error || sourceLink.error) {
+    alert(videoLink.error || sourceLink.error);
+    return;
+  }
+
   try {
+    const wasEditing = Boolean(editingId);
     const recipeId = editingId || generateId();
+    const existing = wasEditing ? recipes.find(r => r.id === editingId) : null;
     let images = [];
 
     // Upload new images if provided
@@ -147,6 +156,7 @@ async function handleFormSubmit() {
 
     // Create recipe object
     const recipe = {
+      ...existing,
       id: recipeId,
       name: recipeName,
       time: recipeTime,
@@ -154,6 +164,8 @@ async function handleFormSubmit() {
       ethnicity,
       notes,
       images,
+      videoUrl: videoLink.url,
+      sourceUrl: sourceLink.url,
       status: 'approved'
     };
 
@@ -173,7 +185,7 @@ async function handleFormSubmit() {
     hideAllPanels();
     renderRecipes(
       recipes.filter(r => r.status === 'approved'),
-      editingId ? 'Recipe Updated' : 'Recipe Added'
+      wasEditing ? 'Recipe Updated' : 'Recipe Added'
     );
 
   } catch (error) {
@@ -203,6 +215,8 @@ function startEditRecipe(recipeId) {
   document.getElementById('mainCategory').value = recipe.mainCategory || '';
   document.getElementById('ethnicity').value = recipe.ethnicity || '';
   document.getElementById('notes').value = recipe.notes || '';
+  document.getElementById('videoUrl').value = recipe.videoUrl || '';
+  document.getElementById('sourceUrl').value = recipe.sourceUrl || '';
   
   if (ui.imageInput) {
     ui.imageInput.value = '';
@@ -396,12 +410,22 @@ async function handleApproveRecipe(recipeId, formData) {
   const existingRecipe = recipes.find(recipe => recipe.id === recipeId);
   if (!existingRecipe) throw new Error('This draft is no longer available');
 
+  const videoField = formData.get('videoUrl');
+  const sourceField = formData.get('sourceUrl');
+  const videoLink = normalizeRecipeUrl(videoField);
+  const sourceLink = normalizeRecipeUrl(sourceField);
+  if (videoLink.error || sourceLink.error) throw new Error(videoLink.error || sourceLink.error);
+
   const updates = {
     name: formData.get('name'),
     time: formData.get('time'),
     mainCategory: formData.get('mainCategory'),
     ethnicity: formData.get('ethnicity'),
-    notes: formData.get('notes')
+    notes: formData.get('notes'),
+    // Keep links from older review forms that do not include the new controls;
+    // an explicit blank field still intentionally removes a saved link.
+    videoUrl: videoField == null ? (existingRecipe.videoUrl || '') : videoLink.url,
+    sourceUrl: sourceField == null ? (existingRecipe.sourceUrl || '') : sourceLink.url
   };
 
   const approvalUpdate = await approveDraftRecipe(recipeId, editorName, updates);

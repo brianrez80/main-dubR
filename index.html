@@ -143,6 +143,18 @@
         </div>
 
         <div class="form-section full">
+          <label for="videoUrl">Recipe Video Link</label>
+          <input id="videoUrl" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=..." />
+          <small>Paste a YouTube or other recipe video link.</small>
+        </div>
+
+        <div class="form-section full">
+          <label for="sourceUrl">Original Recipe Link</label>
+          <input id="sourceUrl" type="url" inputmode="url" placeholder="https://example.com/my-recipe" />
+          <small>Optional link to the original recipe page.</small>
+        </div>
+
+        <div class="form-section full">
           <label for="image">Recipe Images (optional)</label>
           <input id="image" type="file" accept="image/*" multiple />
           <small>Upload one or more photos of the finished recipe</small>
@@ -292,6 +304,7 @@
   <script src="config.js"></script>
   <script src="db.js"></script>
   <script src="images.js"></script>
+  <script src="recipe-links.js"></script>
   <script src="ui.js"></script>
   <script src="auth.js"></script>
   <script src="ocr.js"></script>
