@@ -161,24 +161,11 @@ async function handleNexusRecipeLinkImport(event) {
   event.preventDefault();
   const form = event.currentTarget;
   const status = form.querySelector('[data-nexus-url-status]');
-  const submitted = classifyRecipeLink(new FormData(form).get('recipeLinkUrl'));
-  if (submitted.error) {
-    if (status) status.textContent = submitted.error;
-    return;
-  }
-
   const submitButton = form.querySelector('button[type="submit"]');
   if (submitButton) submitButton.disabled = true;
   if (status) status.textContent = 'Creating your draft…';
   try {
-    const draftRecipe = {
-      id: generateId(), name: 'Untitled Recipe', time: '', mainCategory: '', ethnicity: '', notes: '',
-      status: 'draft', contributorName: 'Cheryl', images: [],
-      videoUrl: submitted.kind === 'video' ? submitted.url : '',
-      sourceUrl: submitted.kind === 'source' ? submitted.url : ''
-    };
-    await saveNewRecipe(draftRecipe);
-    recipes.push(draftRecipe);
+    const draftRecipe = await createRecipeLinkDraft(new FormData(form).get('recipeLinkUrl'));
     closeNexusRecipeLinkForm(form);
     hideAllPanels();
     showReviewComparison(draftRecipe);
@@ -187,6 +174,20 @@ async function handleNexusRecipeLinkImport(event) {
   } finally {
     if (submitButton) submitButton.disabled = false;
   }
+}
+
+async function createRecipeLinkDraft(value, title = '') {
+  const submitted = classifyRecipeLink(value);
+  if (submitted.error) throw new Error(submitted.error);
+  const draftRecipe = {
+    id: generateId(), name: String(title || '').trim() || 'Untitled Recipe', time: '', mainCategory: '', ethnicity: '', notes: '',
+    status: 'draft', contributorName: 'Cheryl', images: [],
+    videoUrl: submitted.kind === 'video' ? submitted.url : '',
+    sourceUrl: submitted.kind === 'source' ? submitted.url : ''
+  };
+  await saveNewRecipe(draftRecipe);
+  if (!recipes.some(recipe => recipe.id === draftRecipe.id)) recipes.push(draftRecipe);
+  return draftRecipe;
 }
 
 function createNexusSource(files, options = {}) {

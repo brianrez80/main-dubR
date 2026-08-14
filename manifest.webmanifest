@@ -1,0 +1,16 @@
+{
+  "name": "Cheryl's Recipe Box",
+  "short_name": "Recipe Box",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f0fb",
+  "theme_color": "#6f4a8e",
+  "icons": [{ "src": "butterfly.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }],
+  "share_target": {
+    "action": "./",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": { "title": "share-title", "text": "share-text", "url": "share-url" }
+  }
+}
