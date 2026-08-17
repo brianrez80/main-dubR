@@ -59,18 +59,47 @@
     <section id="homeView">
       <h2>What does Cheryl want to do</h2>
       <div class="home-buttons">
-        <button class="home-button" data-action="new">Add New Recipe</button>
         <button class="home-button" data-action="main">Browse by Meat / Main Category</button>
         <button class="home-button" data-action="ethnicity">Browse by Ethnicity / Cuisine</button>
         <button class="home-button" data-action="all">All Recipes</button>
-        <button class="home-button" data-action="ocr-upload">Upload Recipe Photo</button>
-        <button class="home-button" data-action="review-queue">Review Queue</button>
-        <button class="home-button nexus-home-button" data-action="nexus">
-          <span class="nexus-home-eyebrow">New</span>
-          📥 Recipe Import Center
-          <span class="nexus-home-copy">Bring in recipes from almost anywhere</span>
-        </button>
+        <button class="home-button nexus-home-button" data-action="nexus">📥 Import Center</button>
       </div>
+      <section class="member-spaces" aria-labelledby="memberSpacesTitle">
+        <h3 id="memberSpacesTitle">Family Recipe Spaces</h3>
+        <div id="memberSpaces" class="home-buttons member-spaces-buttons"></div>
+        <button class="btn secondary" type="button" data-action="add-member">Add Family Member</button>
+      </section>
+    </section>
+
+    <section id="memberRecipeBoxPanel" class="panel hidden" aria-labelledby="memberRecipeBoxTitle">
+      <div class="member-box-header">
+        <div>
+          <h3 id="memberRecipeBoxTitle" data-member-box-title>Family Recipe Box</h3>
+          <p data-member-box-description></p>
+        </div>
+        <button class="btn secondary" type="button" data-member-action="home">Back to Family Recipe Box</button>
+      </div>
+      <div class="home-buttons member-box-actions">
+        <button class="home-button" data-member-action="main">Browse by Meat / Main Category</button>
+        <button class="home-button" data-member-action="ethnicity">Browse by Ethnicity / Cuisine</button>
+        <button class="home-button" data-member-action="all">All Recipes</button>
+        <button class="home-button nexus-home-button" data-member-action="nexus">📥 Import Center</button>
+      </div>
+    </section>
+
+    <section id="memberFormPanel" class="panel hidden" aria-labelledby="familyMemberFormTitle">
+      <h3 id="familyMemberFormTitle">Add Family Member</h3>
+      <form id="familyMemberForm" class="form full">
+        <div class="form-section full">
+          <label for="familyMemberName">Display Name</label>
+          <input id="familyMemberName" type="text" maxlength="100" autocomplete="name" required>
+        </div>
+        <div class="form-actions full">
+          <button class="btn secondary" type="button" onclick="hideAllPanels(); showPanel(ui.homeView);">Cancel</button>
+          <button class="btn save" type="submit">Add Family Member</button>
+        </div>
+        <p id="familyMemberStatus" role="status" aria-live="polite"></p>
+      </form>
     </section>
 
     <!-- Browse by Main Category -->
@@ -139,6 +168,11 @@
           </select>
         </div>
 
+        <div class="form-section">
+          <label for="memberId">Who does this recipe belong to?</label>
+          <select id="memberId" data-member-select required></select>
+        </div>
+
         <div class="form-section full">
           <label for="notes">Ingredients or Instructions</label>
           <textarea id="notes" placeholder="List ingredients and cooking instructions" required></textarea>
@@ -163,7 +197,7 @@
         </div>
 
         <div class="form-actions full">
-          <button type="button" class="btn secondary" onclick="editingId = null; ui.form.reset(); hideAllPanels(); showPanel(ui.homeView);">
+          <button type="button" class="btn secondary" onclick="editingId = null; ui.form.reset(); returnToRecipeSpaceHome();">
             Cancel
           </button>
           <button type="submit" class="btn save">Save Recipe</button>
@@ -184,7 +218,7 @@
       <p>These recipes have been submitted by contributors and are waiting for review and approval.</p>
       <div data-review-list></div>
       <div style="margin-top: 16px;">
-        <button class="btn secondary" onclick="hideAllPanels(); showPanel(ui.homeView);">Back to Home</button>
+        <button class="btn secondary" onclick="returnToRecipeSpaceHome();">Back to Home</button>
       </div>
     </section>
 
@@ -221,6 +255,10 @@
           <div><i data-nexus-readiness-bar style="width: 0%"></i></div>
           <small data-nexus-readiness-detail>Waiting for your first recipe image</small>
         </div>
+      </div>
+      <div class="nexus-member-assignment">
+        <label for="nexusMemberId">Who does this recipe belong to?</label>
+        <select id="nexusMemberId" data-nexus-member-select data-member-select></select>
       </div>
 
       <div class="nexus-workspace">
@@ -261,6 +299,8 @@
                 <button type="submit">Add Recipe Link</button>
                 <button type="button" data-nexus-url-cancel>Cancel</button>
               </div>
+              <label for="nexusLinkMemberId">Who does this recipe belong to?</label>
+              <select id="nexusLinkMemberId" name="memberId" data-member-select required></select>
               <p data-nexus-url-status role="status" aria-live="polite"></p>
             </form>
           </div>

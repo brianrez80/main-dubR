@@ -35,7 +35,8 @@ function mapDbRecipe(row) {
     images: Array.isArray(row.images) ? row.images : null,
     imageUrl: row.image_url || null,
     videoUrl: row.video_url || '',
-    sourceUrl: row.source_url || ''
+    sourceUrl: row.source_url || '',
+    memberId: row.member_id || null
   };
 }
 
@@ -55,7 +56,8 @@ function mapRecipeToDb(recipe) {
     reviewed_at: recipe.reviewedAt || null,
     image_url: JSON.stringify(Array.isArray(recipe.images) ? recipe.images : []),
     video_url: recipe.videoUrl || null,
-    source_url: recipe.sourceUrl || null
+    source_url: recipe.sourceUrl || null,
+    member_id: recipe.memberId || getDefaultMemberId()
   };
 }
 
@@ -75,7 +77,8 @@ function mapRecipeUpdatesToDb(updates) {
     reviewedBy: 'reviewed_by',
     reviewedAt: 'reviewed_at',
     videoUrl: 'video_url',
-    sourceUrl: 'source_url'
+    sourceUrl: 'source_url',
+    memberId: 'member_id'
   };
 
   Object.entries(fieldMap).forEach(([uiField, dbField]) => {
@@ -89,6 +92,55 @@ function mapRecipeUpdatesToDb(updates) {
   }
 
   return dbUpdates;
+}
+
+function mapDbFamilyMember(row) {
+  return {
+    id: row.id,
+    displayName: row.display_name,
+    active: row.active !== false
+  };
+}
+
+// The members table is deliberately separate from recipes so adding another
+// family member later is a data change, not an application change.
+async function fetchFamilyMembers() {
+  const db = getSupabase();
+  if (!db) return [];
+
+  try {
+    const { data, error } = await db.from('family_members')
+      .select('id, display_name, active')
+      .order('display_name');
+
+    if (error) {
+      console.error('Error fetching family members:', error);
+      return null;
+    }
+
+    return Array.isArray(data) ? data.map(mapDbFamilyMember) : [];
+  } catch (err) {
+    console.error('Unexpected error fetching family members:', err);
+    return null;
+  }
+}
+
+async function createFamilyMember(displayName) {
+  const db = getSupabase();
+  if (!db) throw new Error('Supabase not initialized');
+
+  try {
+    const { data, error } = await db.from('family_members')
+      .insert([{ display_name: displayName, active: true }])
+      .select('id, display_name, active')
+      .single();
+
+    if (error) throw new Error(error.message || 'Could not add family member');
+    return mapDbFamilyMember(data);
+  } catch (err) {
+    console.error('Error creating family member:', err);
+    throw err;
+  }
 }
 
 // Fetch all recipes

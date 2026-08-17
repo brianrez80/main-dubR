@@ -39,7 +39,7 @@ const fourImages = [
   'https://example.test/recipes/four-4.jpg'
 ];
 renderRecipes([{ id: 'four', name: 'Four Images', images: fourImages, notes: '' }]);
-assert.strictEqual((recipeList.innerHTML.match(/<article class="recipe-item">/g) || []).length, 1);
+assert.strictEqual((recipeList.innerHTML.match(/<article class="recipe-item"/g) || []).length, 1);
 assert.strictEqual((recipeList.innerHTML.match(/<div class="recipe-image-gallery recipe-image-gallery--4">/g) || []).length, 1);
 assert.strictEqual((recipeList.innerHTML.match(/<img\b/g) || []).length, 4);
 fourImages.forEach(url => {

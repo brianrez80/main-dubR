@@ -7,6 +7,13 @@ let ocrState = {
   processingRecipes: []
 };
 
+function getOcrDefaultMemberId() {
+  if (typeof getCurrentRecipeOwnerId === 'function') return getCurrentRecipeOwnerId();
+  if (typeof getDefaultFamilyMemberId === 'function') return getDefaultFamilyMemberId();
+  if (typeof getDefaultMemberId === 'function') return getDefaultMemberId();
+  return '00000000-0000-4000-8000-000000000001';
+}
+
 const OCR_SECTION_HEADINGS = {
   ingredients: /^(?:ingredients?|what you(?:'|’)ll need)\s*:?\s*$/i,
   instructions: /^(?:directions?|instructions?|method|preparation)\s*:?\s*$/i
@@ -578,7 +585,7 @@ async function performOCR(imageFiles, onProgress) {
 }
 
 // Create draft recipe from OCR data
-async function createDraftFromOCR(images, ocrData, contributorName) {
+async function createDraftFromOCR(images, ocrData, contributorName, memberId = getOcrDefaultMemberId()) {
   const noteSections = [];
   if (ocrData.ingredients) {
     noteSections.push(`Ingredients\n${ocrData.ingredients}`);
@@ -600,6 +607,7 @@ async function createDraftFromOCR(images, ocrData, contributorName) {
     status: 'draft',
     ocrText: JSON.stringify(ocrData),
     contributorName: contributorName || 'Anonymous',
+    memberId,
     reviewedBy: null,
     reviewedAt: null,
     images: images
@@ -657,6 +665,10 @@ function renderOCRUploadForm() {
           <input id="recipeLinkUrl" name="recipeLinkUrl" type="url" inputmode="url" required placeholder="https://example.com/my-recipe">
           <button type="submit" class="btn save">Add Recipe Link</button>
         </div>
+        <label for="recipeLinkMemberId">Who does this recipe belong to?</label>
+        <select id="recipeLinkMemberId" name="memberId" data-member-select required>
+          ${getFamilyMemberOptionsHtml()}
+        </select>
         <p class="recipe-link-import-status" data-recipe-link-status role="status" aria-live="polite"></p>
       </form>
     </section>
@@ -666,6 +678,13 @@ function renderOCRUploadForm() {
         <label for="contributorName">Your Name (for credit)</label>
         <input type="text" id="contributorName" name="contributorName" 
                placeholder="Optional" maxlength="100">
+      </div>
+
+      <div class="form-section full">
+        <label for="ocrMemberId">Who does this recipe belong to?</label>
+        <select id="ocrMemberId" name="memberId" data-member-select required>
+          ${getFamilyMemberOptionsHtml()}
+        </select>
       </div>
 
       <div class="form-section full">
@@ -693,12 +712,13 @@ function renderOCRUploadForm() {
   if (ocrForm) {
     ocrForm.addEventListener('submit', handleOCRUpload);
   }
+  populateMemberSelect(document.getElementById('ocrMemberId'), getCurrentRecipeOwnerId());
+  populateMemberSelect(document.getElementById('recipeLinkMemberId'), getCurrentRecipeOwnerId());
 
   const cancelBtn = form.querySelector('[data-cancel-ocr]');
   if (cancelBtn) {
     cancelBtn.addEventListener('click', () => {
-      hideAllPanels();
-      showPanel(ui.homeView);
+      returnToRecipeSpaceHome();
     });
   }
 
@@ -721,6 +741,10 @@ async function handleRecipeLinkImport(event) {
   if (status) status.textContent = 'Creating your draft…';
 
   try {
+    const requestedMemberId = new FormData(form).get('memberId');
+    const memberId = typeof getRecipeOwnerForCurrentSpace === 'function'
+      ? getRecipeOwnerForCurrentSpace(requestedMemberId)
+      : requestedMemberId || getOcrDefaultMemberId();
     const draftRecipe = {
       id: generateId(),
       name: 'Untitled Recipe',
@@ -730,6 +754,7 @@ async function handleRecipeLinkImport(event) {
       notes: '',
       status: 'draft',
       contributorName: 'Cheryl',
+      memberId,
       videoUrl: submitted.kind === 'video' ? submitted.url : '',
       sourceUrl: submitted.kind === 'source' ? submitted.url : '',
       images: []
@@ -752,11 +777,15 @@ async function handleOCRUpload(event) {
   event.preventDefault();
 
   const contributorNameInput = document.getElementById('contributorName');
+  const memberIdInput = document.getElementById('ocrMemberId');
   const ocrImagesInput = document.getElementById('ocrImages');
   
   if (!contributorNameInput || !ocrImagesInput) return;
 
   const contributorName = contributorNameInput.value.trim() || 'Anonymous';
+  const memberId = typeof getRecipeOwnerForCurrentSpace === 'function'
+    ? getRecipeOwnerForCurrentSpace(memberIdInput?.value)
+    : memberIdInput?.value || getOcrDefaultMemberId();
   const files = Array.from(ocrImagesInput.files);
   const submitButton = event.submitter;
 
@@ -826,7 +855,7 @@ async function handleOCRUpload(event) {
 
     // Create draft recipe
     if (statusText) statusText.textContent = 'Creating recipe...';
-    const draftRecipe = await createDraftFromOCR(imageUrls, ocrResults, contributorName);
+    const draftRecipe = await createDraftFromOCR(imageUrls, ocrResults, contributorName, memberId);
 
     // Submit for review
     await submitOCRRecipe(draftRecipe);
@@ -842,8 +871,7 @@ async function handleOCRUpload(event) {
     // Reset and go back to home
     setTimeout(() => {
       if (progressDiv) progressDiv.classList.add('hidden');
-      hideAllPanels();
-      showPanel(ui.homeView);
+      returnToRecipeSpaceHome();
       ocrImagesInput.value = '';
       if (contributorNameInput) contributorNameInput.value = '';
     }, 2000);

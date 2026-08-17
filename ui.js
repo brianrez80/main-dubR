@@ -7,6 +7,8 @@ const ui = {
   ethnicityBrowser: null,
   recipeResults: null,
   formPanel: null,
+  memberRecipeBoxPanel: null,
+  memberFormPanel: null,
   ocrUploadPanel: null,
   reviewQueuePanel: null,
   reviewComparisonPanel: null,
@@ -17,6 +19,7 @@ const ui = {
   resultsTitle: null,
   formTitle: null,
   form: null,
+  memberForm: null,
   imageInput: null,
   backToTopBtn: null,
   pinScreen: null,
@@ -32,6 +35,8 @@ function initializeUI() {
   ui.ethnicityBrowser = document.getElementById('ethnicityBrowser');
   ui.recipeResults = document.getElementById('recipeResults');
   ui.formPanel = document.getElementById('formPanel');
+  ui.memberRecipeBoxPanel = document.getElementById('memberRecipeBoxPanel');
+  ui.memberFormPanel = document.getElementById('memberFormPanel');
   ui.ocrUploadPanel = document.getElementById('ocrUploadPanel');
   ui.reviewQueuePanel = document.getElementById('reviewQueuePanel');
   ui.reviewComparisonPanel = document.getElementById('reviewComparisonPanel');
@@ -42,12 +47,44 @@ function initializeUI() {
   ui.resultsTitle = document.getElementById('resultsTitle');
   ui.formTitle = document.getElementById('formTitle');
   ui.form = document.getElementById('recipeForm');
+  ui.memberForm = document.getElementById('familyMemberForm');
   ui.imageInput = document.getElementById('image');
   ui.backToTopBtn = document.getElementById('backToTopBtn');
   ui.pinScreen = document.getElementById('pinScreen');
   ui.pinForm = document.getElementById('pinForm');
   ui.pinInput = document.getElementById('pinInput');
   ui.pinError = document.getElementById('pinError');
+  ensureImportCenterButtonLabels();
+}
+
+// Keep the primary import action as literal text in the final initialized DOM.
+// This intentionally uses textContent rather than nested presentation markup.
+function ensureImportCenterButtonLabels() {
+  const importButtons = document.querySelectorAll?.(
+    'button[data-action="nexus"], button[data-member-action="nexus"]'
+  ) || [];
+  importButtons.forEach(button => {
+    button.textContent = '📥 Import Center';
+  });
+}
+
+function renderMemberRecipeBox(member) {
+  if (!ui.memberRecipeBoxPanel || !member) return;
+  const title = `${member.displayName}'s Recipe Box`;
+  ui.memberRecipeBoxPanel.querySelector('[data-member-box-title]').textContent = title;
+  ui.memberRecipeBoxPanel.querySelector('[data-member-box-description]').textContent = `Recipes saved for ${member.displayName}.`;
+  ensureImportCenterButtonLabels();
+}
+
+function renderMemberSpaces(members) {
+  const container = document.getElementById('memberSpaces');
+  if (!container) return;
+
+  const activeMembers = (members || []).filter(member => member.active !== false);
+  container.innerHTML = activeMembers.map(member => `
+    <button class="home-button member-space-button" data-member-id="${escapeHtml(member.id)}">
+      ${escapeHtml(member.displayName)}'s Recipes
+    </button>`).join('');
 }
 
 function hideAllPanels() {
@@ -58,10 +95,23 @@ function hideAllPanels() {
 
 function showPanel(panelElement) {
   if (!panelElement) return;
+  renderMemberSpaceContext(panelElement);
   panelElement.classList.remove('hidden');
   setTimeout(() => {
     panelElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 50);
+}
+
+function renderMemberSpaceContext(panelElement) {
+  panelElement.querySelector?.('.member-space-context')?.remove();
+  const member = typeof getActiveRecipeSpaceMember === 'function' ? getActiveRecipeSpaceMember() : null;
+  if (!member || panelElement === ui.memberRecipeBoxPanel || panelElement === ui.nexusPanel) return;
+
+  const context = document.createElement('div');
+  context.className = 'member-space-context';
+  context.innerHTML = `<strong>${escapeHtml(member.displayName)}'s Recipe Box</strong>
+    <button type="button" class="btn secondary" data-return-to-member-box>Back to ${escapeHtml(member.displayName)}'s Recipe Box</button>`;
+  panelElement.prepend(context);
 }
 
 // Render category chips for filtering
@@ -107,6 +157,7 @@ function renderRecipes(recipes, title = 'Recipes') {
     return `<article class="recipe-item" data-recipe-id="${escapeHtml(recipe.id)}">
       <h4>${escapeHtml(recipe.name)}</h4>
       <div class="meta">${escapeHtml(meta)}</div>
+      <div class="recipe-owner">${escapeHtml(recipe.memberName || 'Family')}’s Recipe</div>
       ${imageHtml}
       <p>${escapeHtml(recipe.notes)}</p>
       <div class="actions">
@@ -116,7 +167,7 @@ function renderRecipes(recipes, title = 'Recipes') {
     </article>`;
   }).join('');
 
-  ui.recipeList.querySelectorAll('.recipe-item[data-recipe-id]').forEach(card => {
+  ui.recipeList.querySelectorAll?.('.recipe-item[data-recipe-id]').forEach(card => {
     const recipe = recipes.find(item => String(item.id) === card.dataset.recipeId);
     if (recipe) appendRecipeLinks(card, recipe);
   });
@@ -242,6 +293,13 @@ function showReviewComparison(recipe) {
           <label for="review-time">Cook Time</label>
           <input type="text" id="review-time" name="time" value="${escapeHtml(recipe.time || '')}">
         </div>
+      </div>
+
+      <div class="form-section">
+        <label for="review-member">Who does this recipe belong to?</label>
+        <select id="review-member" name="memberId" data-member-select required>
+          ${getFamilyMemberOptionsHtml(getRecipeMemberId(recipe))}
+        </select>
       </div>
 
       <div class="form-row">

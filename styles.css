@@ -14,13 +14,15 @@
 .nexus-home-button {
   background: linear-gradient(135deg, #25203c, #563d75);
   border-color: rgba(255,255,255,.24);
-  color: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  color: #fff !important;
+  display: block;
+  font-size: 24px !important;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: visible;
+  text-align: left;
+  white-space: normal;
 }
-.nexus-home-eyebrow,.nexus-home-copy { display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; opacity:.72; margin-bottom:5px; }
-.nexus-home-copy { font-weight:400; letter-spacing:0; text-transform:none; margin:5px 0 0; font-size:13px; }
 
 body:has(.nexus-panel:not(.hidden)) { background:#f7f5f0; }
 body:has(.nexus-panel:not(.hidden)) > .butterfly { opacity:.12; }
@@ -239,6 +241,51 @@ h4 {
   box-shadow: 0 8px 24px rgba(82, 52, 110, 0.12);
 }
 
+.member-spaces {
+  margin-top: 8px;
+}
+
+.member-spaces h3 {
+  margin-bottom: 12px;
+}
+
+.member-spaces-buttons {
+  margin-bottom: 0;
+}
+
+.member-space-button {
+  min-height: 82px;
+  font-size: 20px;
+  background: rgba(250, 247, 255, 0.95);
+}
+
+.member-box-header,
+.member-space-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.member-box-header {
+  margin-bottom: 18px;
+}
+
+.member-box-header h3,
+.member-box-header p {
+  margin: 0;
+}
+
+.member-space-context {
+  margin: -2px 0 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.member-space-context strong {
+  color: var(--accent);
+}
+
 .panel {
   background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--line);
@@ -289,6 +336,28 @@ h4 {
 
 .recipe-item h4 {
   margin: 0 0 6px;
+}
+
+.recipe-owner {
+  display: inline-block;
+  margin: 8px 0 2px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nexus-member-assignment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 440px;
+  margin: -4px 0 20px;
+}
+
+.nexus-member-assignment label {
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .recipe-item img {
@@ -825,6 +894,12 @@ small {
   .review-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .member-box-header,
+  .member-space-context {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .review-actions {

@@ -2,6 +2,8 @@
 
 let recipes = [];
 let editingId = null;
+let familyMembers = [];
+let activeMemberId = null;
 
 // Initialize the application
 async function initializeApp() {
@@ -15,6 +17,9 @@ async function initializeApp() {
 
   // Initialize Authentication
   initializeAuth();
+
+  // Load members before recipes so legacy recipes can safely fall back to Cheryl.
+  await loadFamilyMembers();
 
   // Load recipes
   await loadRecipes();
@@ -30,10 +35,167 @@ async function initializeApp() {
 
   // Render initial UI
   renderCategoryChips();
+  renderMemberSpaces(familyMembers);
+  populateStaticMemberSelects();
   renderOCRUploadForm();
 
   window.dispatchEvent(new Event('recipe-box-ready'));
   console.log('App initialized successfully');
+}
+
+async function loadFamilyMembers() {
+  try {
+    const data = await fetchFamilyMembers();
+    familyMembers = Array.isArray(data) && data.length > 0 ? data : getDefaultFamilyMembers();
+  } catch (error) {
+    console.error('Error loading family members:', error);
+    familyMembers = getDefaultFamilyMembers();
+  }
+}
+
+function getActiveFamilyMembers() {
+  return familyMembers.filter(member => member.active !== false);
+}
+
+function getActiveRecipeSpaceMember() {
+  const member = activeMemberId ? getFamilyMember(activeMemberId) : null;
+  return member?.active !== false ? member : null;
+}
+
+function getCurrentRecipeOwnerId() {
+  return getRecipeOwnerForCurrentSpace();
+}
+
+function getRecipeOwnerForCurrentSpace(requestedMemberId = '') {
+  return getActiveRecipeSpaceMember()?.id || requestedMemberId || getDefaultFamilyMemberId();
+}
+
+function getDefaultFamilyMemberId() {
+  return typeof getDefaultMemberId === 'function'
+    ? getDefaultMemberId()
+    : '00000000-0000-4000-8000-000000000001';
+}
+
+function getRecipeMemberId(recipe) {
+  return recipe?.memberId || getDefaultFamilyMemberId();
+}
+
+function getFamilyMember(memberId) {
+  const defaults = typeof getDefaultFamilyMembers === 'function'
+    ? getDefaultFamilyMembers()
+    : [
+      { id: '00000000-0000-4000-8000-000000000001', displayName: 'Cheryl', active: true },
+      { id: '00000000-0000-4000-8000-000000000002', displayName: 'Tiffany', active: true }
+    ];
+  return familyMembers.find(member => member.id === memberId)
+    || defaults.find(member => member.id === memberId)
+    || null;
+}
+
+function hydrateRecipeMembers(items) {
+  return (items || []).map(recipe => {
+    const member = getFamilyMember(getRecipeMemberId(recipe));
+    return {
+      ...recipe,
+      memberName: member?.displayName || 'Family',
+      memberActive: member?.active !== false
+    };
+  });
+}
+
+function getAllPublishedRecipes() {
+  return recipes.filter(recipe => recipe.status === 'approved' && recipe.memberActive !== false);
+}
+
+function getScopedPublishedRecipes() {
+  const activeMember = getActiveRecipeSpaceMember();
+  return activeMember ? getPublishedRecipesForMember(activeMember.id) : getAllPublishedRecipes();
+}
+
+function getScopedRecipesByFilter(filterType, filterValue) {
+  return getScopedPublishedRecipes().filter(recipe => recipe[filterType] === filterValue);
+}
+
+function getPublishedRecipesForMember(memberId) {
+  return getAllPublishedRecipes().filter(recipe => getRecipeMemberId(recipe) === memberId);
+}
+
+function escapeMemberOption(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+}
+
+function getFamilyMemberOptionsHtml(selectedMemberId = getDefaultFamilyMemberId()) {
+  const selectedMember = getFamilyMember(selectedMemberId);
+  const members = getActiveFamilyMembers().slice();
+  if (selectedMember && !members.some(member => member.id === selectedMember.id)) {
+    members.push(selectedMember);
+  }
+
+  return members.map(member => `
+    <option value="${escapeMemberOption(member.id)}" ${member.id === selectedMemberId ? 'selected' : ''}>
+      ${escapeMemberOption(member.displayName)}${member.active === false ? ' (inactive)' : ''}
+    </option>`).join('');
+}
+
+function populateMemberSelect(select, selectedMemberId = getDefaultFamilyMemberId()) {
+  if (!select) return;
+  const ownerId = getActiveRecipeSpaceMember()?.id || selectedMemberId;
+  select.innerHTML = getFamilyMemberOptionsHtml(ownerId);
+  const isMemberScoped = Boolean(getActiveRecipeSpaceMember());
+  select.disabled = isMemberScoped;
+  select.setAttribute('aria-label', isMemberScoped ? 'Recipe owner is set by this recipe space' : 'Who does this recipe belong to?');
+}
+
+function populateStaticMemberSelects() {
+  document.querySelectorAll('[data-member-select]').forEach(select => {
+    populateMemberSelect(select, select.value || getDefaultFamilyMemberId());
+  });
+}
+
+function openMemberRecipeBox(memberId) {
+  const member = getFamilyMember(memberId);
+  if (!member || member.active === false) return;
+  activeMemberId = member.id;
+  renderMemberRecipeBox(member);
+  populateStaticMemberSelects();
+  hideAllPanels();
+  showPanel(ui.memberRecipeBoxPanel);
+}
+
+function closeMemberRecipeBox() {
+  activeMemberId = null;
+  hideAllPanels();
+  showPanel(ui.homeView);
+}
+
+function returnToRecipeSpaceHome() {
+  const member = getActiveRecipeSpaceMember();
+  hideAllPanels();
+  if (member) {
+    renderMemberRecipeBox(member);
+    showPanel(ui.memberRecipeBoxPanel);
+  } else {
+    showPanel(ui.homeView);
+  }
+}
+
+function addFamilyMemberToState(member) {
+  familyMembers = [...familyMembers, member]
+    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  renderMemberSpaces(familyMembers);
+  populateStaticMemberSelects();
+  return member;
+}
+
+function normalizeFamilyMemberName(value) {
+  return String(value || '').trim().replace(/\s+/g, ' ');
+}
+
+function isDuplicateFamilyMemberName(displayName) {
+  const normalizedName = normalizeFamilyMemberName(displayName).toLocaleLowerCase();
+  return familyMembers.some(member => member.displayName.trim().toLocaleLowerCase() === normalizedName);
 }
 
 // Load recipes from database
@@ -43,15 +205,15 @@ async function loadRecipes() {
     
     if (data === null) {
       // Fall back to default recipes if fetch fails
-      recipes = getDefaultRecipes();
+      recipes = hydrateRecipeMembers(getDefaultRecipes());
       console.warn('Could not load recipes from Supabase, using defaults');
     } else {
-      recipes = data;
+      recipes = hydrateRecipeMembers(data);
       console.log(`Loaded ${recipes.length} recipes`);
     }
   } catch (error) {
     console.error('Error loading recipes:', error);
-    recipes = getDefaultRecipes();
+    recipes = hydrateRecipeMembers(getDefaultRecipes());
   }
 }
 
@@ -69,12 +231,61 @@ function setupHomeViewListeners() {
   if (!homeView) return;
 
   homeView.addEventListener('click', async (e) => {
+    const memberButton = e.target.closest?.('[data-member-id]');
+    if (memberButton) {
+      const member = getFamilyMember(memberButton.dataset.memberId);
+      if (member) {
+        openMemberRecipeBox(member.id);
+      }
+      return;
+    }
+
     const action = e.target.dataset.action;
     if (!action) return;
 
     hideAllPanels();
 
     switch (action) {
+      case 'new':
+        startNewRecipe();
+        break;
+      case 'add-member':
+        showPanel(ui.memberFormPanel);
+        break;
+      case 'main':
+        showPanel(ui.mainBrowser);
+        break;
+      case 'ethnicity':
+        showPanel(ui.ethnicityBrowser);
+        break;
+      case 'all':
+        renderRecipes(
+          getAllPublishedRecipes(),
+          'All Recipes'
+        );
+        break;
+      case 'ocr-upload':
+        renderOCRUploadForm();
+        showPanel(ui.ocrUploadPanel);
+        break;
+      case 'review-queue':
+        await loadAndShowReviewQueue();
+        break;
+      case 'nexus':
+        showPanel(ui.nexusPanel);
+        break;
+    }
+  });
+
+  ui.memberRecipeBoxPanel?.addEventListener('click', async (e) => {
+    const action = e.target.dataset.memberAction;
+    if (!action) return;
+    hideAllPanels();
+
+    switch (action) {
+      case 'home':
+        closeMemberRecipeBox();
+        break;
       case 'new':
         startNewRecipe();
         break;
@@ -85,10 +296,7 @@ function setupHomeViewListeners() {
         showPanel(ui.ethnicityBrowser);
         break;
       case 'all':
-        renderRecipes(
-          recipes.filter(r => r.status === 'approved'),
-          'All Recipes'
-        );
+        renderRecipes(getScopedPublishedRecipes(), `${getActiveRecipeSpaceMember()?.displayName}'s Recipes`);
         break;
       case 'ocr-upload':
         renderOCRUploadForm();
@@ -112,6 +320,38 @@ function setupFormListeners() {
     e.preventDefault();
     await handleFormSubmit();
   });
+
+  ui.memberForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await handleAddFamilyMember();
+  });
+}
+
+async function handleAddFamilyMember() {
+  const input = document.getElementById('familyMemberName');
+  const status = document.getElementById('familyMemberStatus');
+  const name = normalizeFamilyMemberName(input?.value);
+
+  if (!name) {
+    if (status) status.textContent = 'Please enter a family member name.';
+    return;
+  }
+  if (isDuplicateFamilyMemberName(name)) {
+    if (status) status.textContent = 'That family member already exists.';
+    return;
+  }
+
+  try {
+    const member = await createFamilyMember(name);
+    addFamilyMemberToState(member);
+    if (input) input.value = '';
+    if (status) status.textContent = `${member.displayName}'s Recipe Box is ready.`;
+  } catch (error) {
+    const message = /duplicate|unique/i.test(error.message)
+      ? 'That family member already exists.'
+      : `Could not add family member: ${error.message}`;
+    if (status) status.textContent = message;
+  }
 }
 
 // Handle recipe form submission
@@ -123,6 +363,8 @@ async function handleFormSubmit() {
   const notes = document.getElementById('notes')?.value?.trim();
   const videoLink = normalizeRecipeUrl(document.getElementById('videoUrl')?.value);
   const sourceLink = normalizeRecipeUrl(document.getElementById('sourceUrl')?.value);
+  const requestedMemberId = document.getElementById('memberId')?.value;
+  const memberId = getRecipeOwnerForCurrentSpace(requestedMemberId);
   const imageFiles = Array.from(ui.imageInput?.files || []);
 
   if (!recipeName || !mainCategory || !ethnicity || !notes) {
@@ -167,16 +409,17 @@ async function handleFormSubmit() {
       images,
       videoUrl: videoLink.url,
       sourceUrl: sourceLink.url,
+      memberId,
       status: 'approved'
     };
 
     // Save to database
     if (editingId) {
       await updateRecipe(recipeId, recipe);
-      recipes = recipes.map(r => r.id === recipeId ? recipe : r);
+      recipes = recipes.map(r => r.id === recipeId ? hydrateRecipeMembers([recipe])[0] : r);
     } else {
       await saveNewRecipe(recipe);
-      recipes.push(recipe);
+      recipes.push(hydrateRecipeMembers([recipe])[0]);
     }
 
     // Reset form and show results
@@ -185,7 +428,7 @@ async function handleFormSubmit() {
     ui.formTitle.textContent = 'Add New Recipe';
     hideAllPanels();
     renderRecipes(
-      recipes.filter(r => r.status === 'approved'),
+      getScopedPublishedRecipes(),
       wasEditing ? 'Recipe Updated' : 'Recipe Added'
     );
 
@@ -199,6 +442,7 @@ async function handleFormSubmit() {
 function startNewRecipe() {
   editingId = null;
   ui.form.reset();
+  populateMemberSelect(document.getElementById('memberId'), getCurrentRecipeOwnerId());
   ui.formTitle.textContent = 'Add New Recipe';
   showPanel(ui.formPanel);
 }
@@ -218,6 +462,7 @@ function startEditRecipe(recipeId) {
   document.getElementById('notes').value = recipe.notes || '';
   document.getElementById('videoUrl').value = recipe.videoUrl || '';
   document.getElementById('sourceUrl').value = recipe.sourceUrl || '';
+  populateMemberSelect(document.getElementById('memberId'), getRecipeMemberId(recipe));
   
   if (ui.imageInput) {
     ui.imageInput.value = '';
@@ -230,16 +475,20 @@ function startEditRecipe(recipeId) {
 // Recipe list handlers (browse, filter)
 function setupRecipeListeners() {
   document.body.addEventListener('click', (e) => {
+    if (e.target.closest?.('[data-return-to-member-box]')) {
+      returnToRecipeSpaceHome();
+      return;
+    }
+
     // Filter by category or ethnicity
     if (e.target.classList.contains('chip')) {
       const filterType = e.target.dataset.filterType;
       const filterValue = e.target.dataset.filterValue;
 
       if (filterType && filterValue) {
-        const filtered = recipes.filter(
-          r => r[filterType] === filterValue && r.status === 'approved'
-        );
-        renderRecipes(filtered, `${filterValue} Recipes`);
+        const filtered = getScopedRecipesByFilter(filterType, filterValue);
+        const prefix = getActiveRecipeSpaceMember()?.displayName ? `${getActiveRecipeSpaceMember().displayName}'s ` : '';
+        renderRecipes(filtered, `${prefix}${filterValue} Recipes`);
       }
     }
 
@@ -275,7 +524,7 @@ async function handleDeleteRecipe(recipeId) {
 
     // Refresh view
     renderRecipes(
-      recipes.filter(r => r.status === 'approved'),
+      getScopedPublishedRecipes(),
       'Recipe Deleted'
     );
 
@@ -369,7 +618,7 @@ async function submitReviewApproval(form) {
   try {
     await handleApproveRecipe(recipeId, new FormData(form));
     hideAllPanels();
-    renderRecipes(recipes.filter(r => r.status === 'approved'), 'All Recipes');
+    renderRecipes(getScopedPublishedRecipes(), getActiveRecipeSpaceMember() ? `${getActiveRecipeSpaceMember().displayName}'s Recipes` : 'All Recipes');
   } catch (error) {
     const message = getUsefulErrorMessage(error);
     console.error('Failed to publish draft recipe:', error);
@@ -397,7 +646,9 @@ function getUsefulErrorMessage(error) {
 // Load and display review queue
 async function loadAndShowReviewQueue() {
   try {
-    const draftRecipes = recipes.filter(r => r.status === 'draft');
+    const activeMember = getActiveRecipeSpaceMember();
+    const draftRecipes = recipes.filter(recipe => recipe.status === 'draft'
+      && (!activeMember || getRecipeMemberId(recipe) === activeMember.id));
     renderReviewQueue(draftRecipes);
   } catch (error) {
     console.error('Error loading review queue:', error);
@@ -428,9 +679,15 @@ async function handleApproveRecipe(recipeId, formData) {
     videoUrl: videoField == null ? (existingRecipe.videoUrl || '') : videoLink.url,
     sourceUrl: sourceField == null ? (existingRecipe.sourceUrl || '') : sourceLink.url
   };
+  const memberId = formData.get('memberId');
+  if (getActiveRecipeSpaceMember()) {
+    updates.memberId = getCurrentRecipeOwnerId();
+  } else if (memberId != null) {
+    updates.memberId = memberId || getRecipeMemberId(existingRecipe);
+  }
 
   const approvalUpdate = await approveDraftRecipe(recipeId, editorName, updates);
-  const approvedRecipe = { ...existingRecipe, ...updates, ...approvalUpdate };
+  const approvedRecipe = hydrateRecipeMembers([{ ...existingRecipe, ...updates, ...approvalUpdate }])[0];
 
   // Merge rather than replace so imported images, OCR metadata, and contributor
   // data remain available in the approved recipe flow.

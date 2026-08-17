@@ -148,7 +148,7 @@ async function run() {
     assert.equal(form.approveButton.disabled, false);
   });
 
-  await test('approval preserves images, OCR metadata, contributor data, edited fields, and approved status', async () => {
+  await test('approval preserves recipe data and saves the selected owner while publishing', async () => {
     const { context } = createAppContext();
     vm.runInContext(`recipes = [{
       id: 'draft-2', status: 'draft', images: ['one.jpg', 'two.jpg'],
@@ -163,7 +163,8 @@ async function run() {
     });
     const form = makeForm('draft-2', {
       name: 'Edited Recipe', time: '30 min', mainCategory: 'Chicken', ethnicity: 'Italian', notes: 'Edited notes',
-      videoUrl: 'https://youtu.be/abcDEF12345', sourceUrl: 'https://example.com/original'
+      videoUrl: 'https://youtu.be/abcDEF12345', sourceUrl: 'https://example.com/original',
+      memberId: '00000000-0000-4000-8000-000000000002'
     });
     await context.handleApproveRecipe('draft-2', new context.FormData(form));
     const approved = vm.runInContext('recipes[0]', context);
@@ -178,6 +179,7 @@ async function run() {
     assert.equal(approved.contributorName, 'Brian');
     assert.equal(approved.videoUrl, 'https://youtu.be/abcDEF12345');
     assert.equal(approved.sourceUrl, 'https://example.com/original');
+    assert.equal(approved.memberId, '00000000-0000-4000-8000-000000000002');
   });
 
   await test('a publish failure shows useful inline feedback and restores the button', async () => {
