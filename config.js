@@ -25,6 +25,21 @@ const ETHNICITIES = [
   'Mediterranean', 'Other'
 ];
 
+// Family members are data, not UI configuration. These IDs are also used by
+// the ownership migration so an existing recipe can safely belong to Cheryl.
+const DEFAULT_FAMILY_MEMBERS = Object.freeze([
+  { id: '00000000-0000-4000-8000-000000000001', displayName: 'Cheryl', active: true },
+  { id: '00000000-0000-4000-8000-000000000002', displayName: 'Tiffany', active: true }
+]);
+
+function getDefaultFamilyMembers() {
+  return DEFAULT_FAMILY_MEMBERS.map(member => ({ ...member }));
+}
+
+function getDefaultMemberId() {
+  return DEFAULT_FAMILY_MEMBERS[0].id;
+}
+
 // Default recipes (seed data)
 function getDefaultRecipes() {
   return [

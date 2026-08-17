@@ -85,10 +85,10 @@ assert.strictEqual(failed.error, 'bad image');
   };
 
   await api.showRecipeReviewFromImport('ready-1', panel);
-  assert.deepStrictEqual(calls.create.images, []);
+  assert.deepStrictEqual(Array.from(calls.create.images), []);
   assert.strictEqual(calls.create.contributor, 'Cheryl');
   assert.strictEqual(calls.upload.recipeId, 'draft-1');
-  assert.deepStrictEqual(calls.upload.files, [firstFile]);
+  assert.deepStrictEqual(Array.from(calls.upload.files), [firstFile]);
   assert.strictEqual(calls.submit.images[0], 'https://example.test/recipes/draft-1/card.jpg');
   assert.strictEqual(recipes.length, 1);
   assert.strictEqual(calls.comparison.id, 'draft-1');

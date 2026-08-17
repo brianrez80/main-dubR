@@ -8,6 +8,13 @@ let nexusImportState = {
   sessionId: null
 };
 
+function getNexusDefaultMemberId() {
+  if (typeof getCurrentRecipeOwnerId === 'function') return getCurrentRecipeOwnerId();
+  if (typeof getDefaultFamilyMemberId === 'function') return getDefaultFamilyMemberId();
+  if (typeof getDefaultMemberId === 'function') return getDefaultMemberId();
+  return '00000000-0000-4000-8000-000000000001';
+}
+
 function getNexusDuplicateKey(file) {
   return `${file.name}::${file.size}::${file.lastModified}`;
 }
@@ -105,8 +112,7 @@ function initializeNexus() {
     fileInput.value = '';
   });
   closeButton.addEventListener('click', () => {
-    hideAllPanels();
-    showPanel(ui.homeView);
+    returnToRecipeSpaceHome();
   });
   urlOpenButton?.addEventListener('click', () => openNexusRecipeLinkForm(urlForm));
   urlRow?.addEventListener('click', event => {
@@ -165,7 +171,11 @@ async function handleNexusRecipeLinkImport(event) {
   if (submitButton) submitButton.disabled = true;
   if (status) status.textContent = 'Creating your draft…';
   try {
-    const draftRecipe = await createRecipeLinkDraft(new FormData(form).get('recipeLinkUrl'));
+    const formData = new FormData(form);
+    const memberId = typeof getRecipeOwnerForCurrentSpace === 'function'
+      ? getRecipeOwnerForCurrentSpace(formData.get('memberId'))
+      : formData.get('memberId') || getNexusDefaultMemberId();
+    const draftRecipe = await createRecipeLinkDraft(formData.get('recipeLinkUrl'), '', memberId);
     closeNexusRecipeLinkForm(form);
     hideAllPanels();
     showReviewComparison(draftRecipe);
@@ -176,12 +186,12 @@ async function handleNexusRecipeLinkImport(event) {
   }
 }
 
-async function createRecipeLinkDraft(value, title = '') {
+async function createRecipeLinkDraft(value, title = '', memberId = getNexusDefaultMemberId()) {
   const submitted = classifyRecipeLink(value);
   if (submitted.error) throw new Error(submitted.error);
   const draftRecipe = {
     id: generateId(), name: String(title || '').trim() || 'Untitled Recipe', time: '', mainCategory: '', ethnicity: '', notes: '',
-    status: 'draft', contributorName: 'Cheryl', images: [],
+    status: 'draft', contributorName: 'Cheryl', memberId, images: [],
     videoUrl: submitted.kind === 'video' ? submitted.url : '',
     sourceUrl: submitted.kind === 'source' ? submitted.url : ''
   };
@@ -445,14 +455,20 @@ async function showRecipeReviewFromImport(itemId, panel) {
   if (!entry || !entry.ocrData || entry.status !== 'ready' || entry.openingReview) return;
 
   entry.openingReview = true;
+  const entryFiles = Array.isArray(entry.files) ? entry.files : [entry.file].filter(Boolean);
+  if (!entryFiles.length) return;
   if (messageBox) {
-    messageBox.textContent = entry.files.length > 1
+    messageBox.textContent = entryFiles.length > 1
       ? 'Saving the original images and preparing your review...'
       : 'Saving the original image and preparing your review...';
   }
   try {
-    const reviewRecipe = await createDraftFromOCR([], entry.ocrData, 'Cheryl');
-    const imageUrls = await uploadSelectedImages(reviewRecipe.id, entry.files);
+    const selectedMemberId = panel.querySelector('[data-nexus-member-select]')?.value;
+    const memberId = typeof getRecipeOwnerForCurrentSpace === 'function'
+      ? getRecipeOwnerForCurrentSpace(selectedMemberId)
+      : selectedMemberId || getNexusDefaultMemberId();
+    const reviewRecipe = await createDraftFromOCR([], entry.ocrData, 'Cheryl', memberId);
+    const imageUrls = await uploadSelectedImages(reviewRecipe.id, entryFiles);
     if (!imageUrls) throw new Error('The original recipe image could not be saved. Please try again.');
 
     reviewRecipe.images = imageUrls;
