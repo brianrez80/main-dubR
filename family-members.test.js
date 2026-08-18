@@ -123,7 +123,7 @@ test('shared manual recipe creation honors the selected member', () => {
   );
 });
 
-test('duplicate member names are prevented and new members update the dynamic member spaces', () => {
+test('duplicate member names are prevented and Cheryl stays pinned first in the dynamic member spaces', () => {
   vm.runInContext(`
     familyMembers = getDefaultFamilyMembers();
     let renderedNames = [];
@@ -133,7 +133,7 @@ test('duplicate member names are prevented and new members update the dynamic me
     this.__renderedNames = renderedNames;
   `, app);
   assert.equal(vm.runInContext("isDuplicateFamilyMemberName('  brian ')", app), true);
-  assert.deepEqual(Array.from(vm.runInContext('__renderedNames', app)), ['Brian', 'Cheryl', 'Tiffany']);
+  assert.deepEqual(Array.from(vm.runInContext('__renderedNames', app)), ['Cheryl', 'Tiffany', 'Brian']);
 });
 
 async function runAsyncChecks() {

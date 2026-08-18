@@ -46,15 +46,30 @@ async function initializeApp() {
 async function loadFamilyMembers() {
   try {
     const data = await fetchFamilyMembers();
-    familyMembers = Array.isArray(data) && data.length > 0 ? data : getDefaultFamilyMembers();
+    familyMembers = getOrderedFamilyMembers(Array.isArray(data) && data.length > 0 ? data : getDefaultFamilyMembers());
   } catch (error) {
     console.error('Error loading family members:', error);
-    familyMembers = getDefaultFamilyMembers();
+    familyMembers = getOrderedFamilyMembers(getDefaultFamilyMembers());
   }
 }
 
+function isCherylMember(member) {
+  if (!member) return false;
+  return String(member.id || '').toLowerCase() === String(getDefaultFamilyMemberId()).toLowerCase()
+    || normalizeFamilyMemberName(member.displayName).toLocaleLowerCase() === 'cheryl';
+}
+
+function getOrderedFamilyMembers(members = []) {
+  const ordered = Array.isArray(members) ? members.slice() : [];
+  const cherylIndex = ordered.findIndex(isCherylMember);
+  if (cherylIndex <= 0) return ordered;
+  const [cherylMember] = ordered.splice(cherylIndex, 1);
+  ordered.unshift(cherylMember);
+  return ordered;
+}
+
 function getActiveFamilyMembers() {
-  return familyMembers.filter(member => member.active !== false);
+  return getOrderedFamilyMembers(familyMembers.filter(member => member.active !== false));
 }
 
 function getActiveRecipeSpaceMember() {
@@ -182,8 +197,7 @@ function returnToRecipeSpaceHome() {
 }
 
 function addFamilyMemberToState(member) {
-  familyMembers = [...familyMembers, member]
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  familyMembers = getOrderedFamilyMembers([...familyMembers, member]);
   renderMemberSpaces(familyMembers);
   populateStaticMemberSelects();
   return member;
